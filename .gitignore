@@ -1,2 +1,12 @@
-/bin
+bin
+build
+testing
+target/maven*
+
+.classpath
+.project
+.settings
+
+*.class
+
 /target
