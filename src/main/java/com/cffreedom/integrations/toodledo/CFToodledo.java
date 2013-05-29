@@ -2,6 +2,7 @@ package com.cffreedom.integrations.toodledo;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 
 import org.json.simple.JSONArray;
@@ -30,6 +31,9 @@ import com.cffreedom.utils.net.HttpUtils;
  * 1) Donating: http://www.communicationfreedom.com/go/donate/
  * 2) Shoutout on twitter: @MarkJacobsen or @cffreedom
  * 3) Linking to: http://visit.markjacobsen.net
+ * 
+ * Changes:
+ * 2013-05-29 	markjacobsen.net 	Added start/due dates
  */
 public class CFToodledo
 {
@@ -131,6 +135,10 @@ public class CFToodledo
 			String note = JsonUtils.getJsonObjectStringVal(task, "note");
 			String folderName = JsonUtils.getJsonObjectStringVal(task, "folder");
 			String tagList = JsonUtils.getJsonObjectStringVal(task, "tag");
+			String startD = JsonUtils.getJsonObjectStringVal(task, "startdate");
+			String dueD = JsonUtils.getJsonObjectStringVal(task, "duedate");
+			Date startDate = ConversionUtils.toDate(startD);
+			Date dueDate = ConversionUtils.toDate(dueD);
 
 			if ((tagList != null) && (tagList.trim().length() > 0))
 			{
@@ -149,7 +157,7 @@ public class CFToodledo
 
 			if (code != null)
 			{
-				tasks.add(new Task(Task.SYS_TOODLEDO, folder, project, code, title, note, meta, tags));
+				tasks.add(new Task(Task.SYS_TOODLEDO, folder, project, code, title, note, meta, startDate, dueDate, tags));
 			}
 		}
 

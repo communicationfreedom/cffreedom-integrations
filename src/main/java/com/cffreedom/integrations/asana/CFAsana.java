@@ -2,6 +2,7 @@ package com.cffreedom.integrations.asana;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 
 import org.apache.commons.codec.binary.Base64;
@@ -31,6 +32,9 @@ import com.cffreedom.utils.net.HttpUtils;
  * 1) Donating: http://www.communicationfreedom.com/go/donate/
  * 2) Shoutout on twitter: @MarkJacobsen or @cffreedom
  * 3) Linking to: http://visit.markjacobsen.net
+ * 
+ * Changes:
+ * 2013-05-29 	markjacobsen.net 	Added start/due dates
  */
 public class CFAsana
 {
@@ -158,10 +162,12 @@ public class CFAsana
 				String title = JsonUtils.getJsonObjectStringVal(task, "name");
 				String meta = "";
 				String note = JsonUtils.getJsonObjectStringVal(task, "notes");
+				String due = JsonUtils.getJsonObjectStringVal(task, "due_on");
+				Date dueDate = ConversionUtils.toDate(due);
 
 				if (code != null)
 				{
-					Task tempTask = new Task(Task.SYS_ASANA, workspace, project, code, title, note, meta, null);
+					Task tempTask = new Task(Task.SYS_ASANA, workspace, project, code, title, note, meta, dueDate, dueDate, null);
 					ArrayList<Container> tags = this.getTags(tempTask);
 					tempTask.setTags(tags);
 					tasks.add(tempTask);
