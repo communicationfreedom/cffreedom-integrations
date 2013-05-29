@@ -14,6 +14,7 @@ import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
 import com.cffreedom.beans.Task;
 import com.cffreedom.utils.ConversionUtils;
+import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
 import com.cffreedom.utils.LoggerUtil;
 import com.cffreedom.utils.Utils;
@@ -146,10 +147,8 @@ public class CFAsana
 
 		try
 		{
-			String url = "https://app.asana.com/api/1.0/projects/" + project
-					.getCode() + "/tasks?opt_fields=name,notes";
-			String response = HttpUtils
-					.httpGetWithReqProp(url, "Authorization", this.getAuthVal());
+			String url = "https://app.asana.com/api/1.0/projects/" + project.getCode() + "/tasks?opt_fields=name,notes,due_on";
+			String response = HttpUtils.httpGetWithReqProp(url, "Authorization", this.getAuthVal());
 			JSONObject jsonObj = JsonUtils.getJsonObject(response);
 			JSONArray tasksArray = JsonUtils.getJsonArray(jsonObj, "data");
 
@@ -157,13 +156,14 @@ public class CFAsana
 			while (iterator.hasNext())
 			{
 				JSONObject task = iterator.next();
+				//Utils.output(task.toJSONString());
 				Long id = JsonUtils.getJsonObjectLongVal(task, "id");
 				String code = ConversionUtils.toString(id);
 				String title = JsonUtils.getJsonObjectStringVal(task, "name");
 				String meta = "";
 				String note = JsonUtils.getJsonObjectStringVal(task, "notes");
-				String due = JsonUtils.getJsonObjectStringVal(task, "due_on");
-				Date dueDate = ConversionUtils.toDate(due);
+				String due = JsonUtils.getJsonObjectStringVal(task, "due_on");		
+				Date dueDate = ConversionUtils.toDate(due, DateTimeUtils.MASK_FILE_DATESTAMP);
 
 				if (code != null)
 				{
