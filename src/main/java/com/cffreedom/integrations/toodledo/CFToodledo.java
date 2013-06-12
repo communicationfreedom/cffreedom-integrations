@@ -122,6 +122,7 @@ public class CFToodledo
 		ArrayList<Task> tasks = new ArrayList<Task>();
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/get.php?key=" + this.getKey() + ";comp=0;fields=" + FIELDS;
 		String response = HttpUtils.httpGet(url);
+		Utils.output(response);
 		JSONArray tasksArray = JsonUtils.getJsonArray(response);
 
 		Iterator<JSONObject> iterator = tasksArray.iterator();
@@ -135,11 +136,14 @@ public class CFToodledo
 			String note = JsonUtils.getJsonObjectStringVal(task, "note");
 			String folderName = JsonUtils.getJsonObjectStringVal(task, "folder");
 			String tagList = JsonUtils.getJsonObjectStringVal(task, "tag");
-			String startD = JsonUtils.getJsonObjectStringVal(task, "startdate");
-			String dueD = JsonUtils.getJsonObjectStringVal(task, "duedate");
-			Date startDate = ConversionUtils.toDate(startD);
-			Date dueDate = ConversionUtils.toDate(dueD);
-
+			
+			Long startL = JsonUtils.getJsonObjectLongVal(task, "startdate");
+			Long dueL = JsonUtils.getJsonObjectLongVal(task, "duedate");
+			Date startDate = null;
+			Date dueDate = null;
+			if (startL != null) { startDate = ConversionUtils.toDate(startL); }
+			if (dueL != null) { dueDate = ConversionUtils.toDate(dueL); }
+			
 			if ((tagList != null) && (tagList.trim().length() > 0))
 			{
 				String[] tagArray = tagList.split(",");
