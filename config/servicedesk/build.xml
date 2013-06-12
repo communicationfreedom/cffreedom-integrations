@@ -1,0 +1,21 @@
+<project name="CA Service Desk JAR Build" default="done" basedir=".">
+	<property name="src.path" value="." />
+	<property name="jar.file" value="./CAServiceDesk.jar" />
+	
+	<target name="build">
+		<delete file="${jar.file}" />
+		<jar destfile="${jar.file}">
+			<fileset dir="${src.path}" includes="com/**" />
+		</jar>
+	</target>
+	
+	
+	<target name="deploy" depends="build">
+		
+	</target>
+	
+	
+	<target name="done" depends="deploy" description="End Build/Deploy">
+	    <echo message="Done" />
+	</target>
+</project>
