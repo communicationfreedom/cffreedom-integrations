@@ -28,5 +28,10 @@
 			<artifactId>twilio-java-sdk</artifactId>
 			<version>3.3.15</version>
 		</dependency>
+		<dependency>
+			<groupId>axis</groupId>
+			<artifactId>axis</artifactId>
+			<version>1.4</version>
+		</dependency>
 	</dependencies>
 </project>
