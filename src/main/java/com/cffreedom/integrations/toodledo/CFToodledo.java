@@ -13,8 +13,11 @@ import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
 import com.cffreedom.beans.Task;
 import com.cffreedom.utils.ConversionUtils;
+import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
+import com.cffreedom.utils.KeyValueFileMgr;
 import com.cffreedom.utils.LoggerUtil;
+import com.cffreedom.utils.SystemUtils;
 import com.cffreedom.utils.Utils;
 import com.cffreedom.utils.net.HttpUtils;
 
@@ -50,29 +53,80 @@ public class CFToodledo
 	/**
 	 * Create an instance of the ToodledoDAO
 	 * 
+	 * Note: Per the API doc "Each user is allowed to request 10 tokens per hour via the 
+	 * "/account/token.php" API call. Any further token requests will be blocked."  Therefore,
+	 * we work around this with the use of the KeyValueFileMgr to cache tokens between runs
+	 * and to allow the use of this class for multiple users.
+	 * 
 	 * @param userEmail your account email
 	 * @param userPassword your account password
 	 * @param apiToken from your account settings
 	 * @throws Exception
+	 * 
+	 * Changes:
+	 * 2013-06-13	markjacobsen.net 	Enhancements for caching tokens and handling due/start dates/times
 	 */
 	public CFToodledo(String userEmail, String userPassword, String apiToken) throws Exception
 	{
+		final String METHOD = "init";
+		
+		logger.logDebug(METHOD, "User: " + userEmail);
+		
 		this.userEmail = userEmail;
 		this.userPass = userPassword;
 		this.apiToken = apiToken;
 
-		String sig = ConversionUtils.toMd5(this.getUserEmail() + this.apiToken);
-		String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
-		String response = HttpUtils.httpGet(url);
-		JSONObject jsonObj = JsonUtils.getJsonObject(response);
-		String userId = JsonUtils.getJsonObjectStringVal(jsonObj, "userid");
-
-		String encodedLogin = ConversionUtils.toMd5(userId + this.apiToken);
-		url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
-		response = HttpUtils.httpGet(url);
-		jsonObj = JsonUtils.getJsonObject(response);
-		this.token = JsonUtils.getJsonObjectStringVal(jsonObj, "token");
-		System.out.println(this.token);
+		String tokenFile = null;
+		KeyValueFileMgr tokenCache = null;
+		
+		try
+		{
+			tokenFile = SystemUtils.getTempDir() + SystemUtils.getPathSeparator() + "CFToodledo.tokens";
+			tokenCache = new KeyValueFileMgr(tokenFile);
+			if (tokenCache.keyExists(this.getUserEmail()) == true)
+			{
+				String cachedVal = tokenCache.getEntryAsString(this.getUserEmail());
+				logger.logDebug(METHOD, "Cached token exists for: " + this.getUserEmail() + ", value: " + cachedVal);
+				String[] value = cachedVal.split("\\|");
+				if (ConversionUtils.toDate(value[1], DateTimeUtils.MASK_FULL_TIMESTAMP).after(DateTimeUtils.dateAdd(new Date(), -2, DateTimeUtils.DATE_PART_HOUR)) == true)
+				{
+					logger.logDebug(METHOD, "Using cached token");
+					this.token = value[0];
+				}
+				else
+				{
+					logger.logDebug(METHOD, "Removing expired token");
+					tokenCache.removeEntry(this.getUserEmail());
+				}
+			}
+		}
+		catch (Exception e){ logger.logError(METHOD, "Error attempting to get token from cache file", e); }
+		
+		if (this.token == null)
+		{
+			logger.logDebug(METHOD, "No cached token so lets go get one");
+			String sig = ConversionUtils.toMd5(this.getUserEmail() + this.apiToken);
+			String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
+			String response = HttpUtils.httpGet(url);
+			JSONObject jsonObj = JsonUtils.getJsonObject(response);
+			String userId = JsonUtils.getJsonObjectStringVal(jsonObj, "userid");
+			String encodedLogin = ConversionUtils.toMd5(userId + this.apiToken);
+			url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
+			response = HttpUtils.httpGet(url);
+			jsonObj = JsonUtils.getJsonObject(response);
+			this.token = JsonUtils.getJsonObjectStringVal(jsonObj, "token");
+			
+			try
+			{
+				if (tokenCache.addEntry(this.getUserEmail(), this.token + "|" + ConversionUtils.toString(new Date(), DateTimeUtils.MASK_FULL_TIMESTAMP)) == true)
+				{
+					logger.logDebug(METHOD, "Stored token in cache file");
+				}
+			}
+			catch (Exception e){ logger.logError(METHOD, "Error attempting to store token in cache file", e); }
+		}
+		
+		logger.logDebug(METHOD, "Token: " + this.token);
 
 		this.key = ConversionUtils.toMd5(ConversionUtils.toMd5(this.getUserPass()) + this.apiToken + this.getToken());
 	}
@@ -137,12 +191,41 @@ public class CFToodledo
 			String folderName = JsonUtils.getJsonObjectStringVal(task, "folder");
 			String tagList = JsonUtils.getJsonObjectStringVal(task, "tag");
 			
-			Long startL = JsonUtils.getJsonObjectLongVal(task, "startdate");
-			Long dueL = JsonUtils.getJsonObjectLongVal(task, "duedate");
 			Date startDate = null;
+			Date startTime = null;
 			Date dueDate = null;
-			if (startL != null) { startDate = ConversionUtils.toDate(startL); }
-			if (dueL != null) { dueDate = ConversionUtils.toDate(dueL); }
+			Date dueTime = null;
+			Long startL = JsonUtils.getJsonObjectLongVal(task, "startdate");
+			String startTimeS = JsonUtils.getJsonObjectStringVal(task, "starttime");
+			Long dueL = JsonUtils.getJsonObjectLongVal(task, "duedate");
+			
+			try{
+				Long dueTimeL = JsonUtils.getJsonObjectLongVal(task, "duetime");
+				if (dueTimeL != null) { dueTime = DateTimeUtils.gmtToLocal(ConversionUtils.toDate(dueTimeL.longValue()*1000)); Utils.output(dueTime + "<-- converted"); }
+			}catch (Exception e){
+				// If it's not a long it's going to be a string w/ a value of "0" for no time
+				String dueTimeS = JsonUtils.getJsonObjectStringVal(task, "duetime");
+				if (dueTimeS != null) 
+				{ 
+					if (dueTimeS.equalsIgnoreCase("0") == true) { dueTime = ConversionUtils.toDate("1900-01-01 00:00:00", DateTimeUtils.MASK_FILE_TIMESTAMP); }
+					else { dueTime = ConversionUtils.toDate(ConversionUtils.toLong(dueTimeS)*1000); }
+				}
+			}
+			
+			if (startL != null)
+			{
+				startDate = ConversionUtils.toDate(startL.longValue()*1000);
+				if (startTimeS != null)
+				{
+					startTime = ConversionUtils.toDate(ConversionUtils.toLong(startTimeS)*1000);
+					startDate = DateTimeUtils.combineDates(startDate, startTime);
+				}
+			}
+			if (dueL != null)
+			{
+				dueDate = ConversionUtils.toDate(dueL.longValue()*1000);
+				if (dueTime != null){ dueDate = DateTimeUtils.combineDates(dueDate, dueTime); }
+			}
 			
 			if ((tagList != null) && (tagList.trim().length() > 0))
 			{
