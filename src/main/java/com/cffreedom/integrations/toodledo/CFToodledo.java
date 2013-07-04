@@ -107,12 +107,12 @@ public class CFToodledo
 			logger.logDebug(METHOD, "No cached token so lets go get one");
 			String sig = ConversionUtils.toMd5(this.getUserEmail() + this.apiToken);
 			String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
-			String response = HttpUtils.httpGet(url);
+			String response = HttpUtils.httpGet(url).getDetail();
 			JSONObject jsonObj = JsonUtils.getJsonObject(response);
 			String userId = JsonUtils.getJsonObjectStringVal(jsonObj, "userid");
 			String encodedLogin = ConversionUtils.toMd5(userId + this.apiToken);
 			url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
-			response = HttpUtils.httpGet(url);
+			response = HttpUtils.httpGet(url).getDetail();
 			jsonObj = JsonUtils.getJsonObject(response);
 			this.token = JsonUtils.getJsonObjectStringVal(jsonObj, "token");
 			
@@ -175,7 +175,7 @@ public class CFToodledo
 		final String FIELDS = "meta,folder,context,tag,startdate,starttime,duedate,duetime,note";
 		ArrayList<Task> tasks = new ArrayList<Task>();
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/get.php?key=" + this.getKey() + ";comp=0;fields=" + FIELDS;
-		String response = HttpUtils.httpGet(url);
+		String response = HttpUtils.httpGet(url).getDetail();
 		Utils.output(response);
 		JSONArray tasksArray = JsonUtils.getJsonArray(response);
 
@@ -272,7 +272,7 @@ public class CFToodledo
 	{
 		final String METHOD = "insertTask";
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/add.php?key="+this.getKey()+";tasks=[{\"title\"%3A\""+task.getTitle()+"\"%2C\"folder\"%3A\""+task.getFolder().getCode()+"\"}];fields=folder";
-		String response = HttpUtils.httpGet(url);
+		String response = HttpUtils.httpGet(url).getDetail();
 		logger.logDebug(METHOD, response);
 		JSONArray tasksArray = JsonUtils.getJsonArray(response);
 		JSONObject newTask = (JSONObject)(tasksArray.get(0));

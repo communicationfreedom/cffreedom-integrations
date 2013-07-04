@@ -36,7 +36,7 @@ public class CFStripe
 	public final static String TEST_CC_DECLINE = "4000000000000002";
 	
 	private String apiKey = null;
-
+	
 	public CFStripe(String apiKey)
 	{
 		this.apiKey = apiKey;
@@ -68,7 +68,12 @@ public class CFStripe
 
 	public Token createCardToken(String cardholderName, String cardNum, String secCode, int expMonth, int expYear) throws StripeException
 	{
-		Stripe.apiKey = this.getApiKey();
+		return createCardToken(this.getApiKey(), cardholderName, cardNum, secCode, expMonth, expYear);
+	}
+	
+	public static Token createCardToken(String apiKey, String cardholderName, String cardNum, String secCode, int expMonth, int expYear) throws StripeException
+	{
+		Stripe.apiKey = apiKey;
 		Map<String, Object> tokenParams = new HashMap<String, Object>();
 		Map<String, Object> cardParams = new HashMap<String, Object>();
 		cardParams.put("name", cardholderName);
@@ -123,13 +128,29 @@ public class CFStripe
 		return Charge.create(chargeParams);
 	}
 	
-	public Subscription updateOrder(String orderCode, String newPlanCode) throws StripeException
+	public Subscription updateOrder(String custCode, String newPlanCode) throws StripeException
 	{
 		Stripe.apiKey = this.getApiKey();
-		Customer c = Customer.retrieve(orderCode);
+		Customer c = Customer.retrieve(custCode);
 		Map<String, Object> subscriptionParams = new HashMap<String, Object>();
 		subscriptionParams.put("plan", newPlanCode);
 		subscriptionParams.put("prorate", "true");
+		return c.updateSubscription(subscriptionParams);
+	}
+	
+	public Subscription updateCreditCard(Token cardToken, String custCode, String planCode) throws StripeException
+	{
+		return updateCreditCard(this.getApiKey(), cardToken, custCode, planCode);
+	}
+	
+	public static Subscription updateCreditCard(String apiKey, Token cardToken, String custCode, String planCode) throws StripeException
+	{
+		Stripe.apiKey = apiKey;
+		Customer c = Customer.retrieve(custCode);
+		Map<String, Object> subscriptionParams = new HashMap<String, Object>();
+		subscriptionParams.put("plan", planCode);
+		subscriptionParams.put("prorate", "true");
+		subscriptionParams.put("card", cardToken.getId());
 		return c.updateSubscription(subscriptionParams);
 	}
 	
@@ -143,5 +164,10 @@ public class CFStripe
 	public Customer getCustomer(String id) throws StripeException
 	{
 		return Customer.retrieve(id);
+	}
+	
+	public static String test()
+	{
+		return "Hi from static test()";
 	}
 }
