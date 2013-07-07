@@ -8,6 +8,8 @@ import java.util.Iterator;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
@@ -16,7 +18,6 @@ import com.cffreedom.utils.ConversionUtils;
 import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
 import com.cffreedom.utils.KeyValueFileMgr;
-import com.cffreedom.utils.LoggerUtil;
 import com.cffreedom.utils.SystemUtils;
 import com.cffreedom.utils.Utils;
 import com.cffreedom.utils.net.HttpUtils;
@@ -40,7 +41,7 @@ import com.cffreedom.utils.net.HttpUtils;
  */
 public class CFToodledo
 {
-	private final LoggerUtil logger = new LoggerUtil(LoggerUtil.FAMILY_TASK, this.getClass().getPackage().getName() + "." + this.getClass().getSimpleName());
+	private static final Logger logger = LoggerFactory.getLogger("com.cffreedom.integrations.toodledo.CFToodledo");
 	private final String APP_ID = "cffreedom";
 	private final String HTTP_PROTOCOL = "https://";
 
@@ -68,9 +69,7 @@ public class CFToodledo
 	 */
 	public CFToodledo(String userEmail, String userPassword, String apiToken) throws Exception
 	{
-		final String METHOD = "init";
-		
-		logger.logDebug(METHOD, "User: " + userEmail);
+		logger.debug("User: {}", userEmail);
 		
 		this.userEmail = userEmail;
 		this.userPass = userPassword;
@@ -86,25 +85,25 @@ public class CFToodledo
 			if (tokenCache.keyExists(this.getUserEmail()) == true)
 			{
 				String cachedVal = tokenCache.getEntryAsString(this.getUserEmail());
-				logger.logDebug(METHOD, "Cached token exists for: " + this.getUserEmail() + ", value: " + cachedVal);
+				logger.debug("Cached token exists for: {}, value: {}", this.getUserEmail(), cachedVal);
 				String[] value = cachedVal.split("\\|");
 				if (ConversionUtils.toDate(value[1], DateTimeUtils.MASK_FULL_TIMESTAMP).after(DateTimeUtils.dateAdd(new Date(), -2, DateTimeUtils.DATE_PART_HOUR)) == true)
 				{
-					logger.logDebug(METHOD, "Using cached token");
+					logger.debug("Using cached token");
 					this.token = value[0];
 				}
 				else
 				{
-					logger.logDebug(METHOD, "Removing expired token");
+					logger.debug("Removing expired token");
 					tokenCache.removeEntry(this.getUserEmail());
 				}
 			}
 		}
-		catch (Exception e){ logger.logError(METHOD, "Error attempting to get token from cache file", e); }
+		catch (Exception e){ logger.error("Error attempting to get token from cache file"); }
 		
 		if (this.token == null)
 		{
-			logger.logDebug(METHOD, "No cached token so lets go get one");
+			logger.debug("No cached token so lets go get one");
 			String sig = ConversionUtils.toMd5(this.getUserEmail() + this.apiToken);
 			String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
 			String response = HttpUtils.httpGet(url).getDetail();
@@ -120,13 +119,13 @@ public class CFToodledo
 			{
 				if (tokenCache.addEntry(this.getUserEmail(), this.token + "|" + ConversionUtils.toString(new Date(), DateTimeUtils.MASK_FULL_TIMESTAMP)) == true)
 				{
-					logger.logDebug(METHOD, "Stored token in cache file");
+					logger.debug("Stored token in cache file");
 				}
 			}
-			catch (Exception e){ logger.logError(METHOD, "Error attempting to store token in cache file", e); }
+			catch (Exception e){ logger.error("Error attempting to store token in cache file"); }
 		}
 		
-		logger.logDebug(METHOD, "Token: " + this.token);
+		logger.debug("Token: {}", this.token);
 
 		this.key = ConversionUtils.toMd5(ConversionUtils.toMd5(this.getUserPass()) + this.apiToken + this.getToken());
 	}
@@ -253,7 +252,6 @@ public class CFToodledo
 
 	public ArrayList<Task> getTasks(Container folder) throws IOException, ParseException
 	{
-		final String METHOD = "getTasks";
 		ArrayList<Task> tasks = new ArrayList<Task>();
 
 		for (Task task : this.getTasks())
@@ -264,20 +262,19 @@ public class CFToodledo
 			}
 		}
 
-		logger.logInfo(METHOD, "Returning "+tasks.size()+" tasks for folder "+folder.getValue());
+		logger.info("Returning {} tasks for folder {}", tasks.size(), folder.getValue());
 		return tasks;
 	}
 	
 	public boolean insertTask(Task task) throws IOException, ParseException
 	{
-		final String METHOD = "insertTask";
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/add.php?key="+this.getKey()+";tasks=[{\"title\"%3A\""+task.getTitle()+"\"%2C\"folder\"%3A\""+task.getFolder().getCode()+"\"}];fields=folder";
 		String response = HttpUtils.httpGet(url).getDetail();
-		logger.logDebug(METHOD, response);
+		logger.debug("{}", response);
 		JSONArray tasksArray = JsonUtils.getJsonArray(response);
 		JSONObject newTask = (JSONObject)(tasksArray.get(0));
 		Long id = JsonUtils.getJsonObjectLongVal(newTask, "id");
-		logger.logDebug(METHOD, "New task id: " + id);
+		logger.debug("New task id: {}", id);
 		return false;
 	}
 }

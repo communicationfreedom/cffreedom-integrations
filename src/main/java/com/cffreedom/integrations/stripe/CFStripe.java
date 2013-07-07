@@ -4,9 +4,11 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.cffreedom.utils.ConversionUtils;
 import com.cffreedom.utils.DateTimeUtils;
-import com.cffreedom.utils.LoggerUtil;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Charge;
@@ -31,7 +33,7 @@ import com.stripe.model.Token;
  */
 public class CFStripe
 {
-	private final LoggerUtil logger = new LoggerUtil(LoggerUtil.FAMILY_TASK, this.getClass().getPackage().getName() + "." + this.getClass().getSimpleName());
+	private static final Logger logger = LoggerFactory.getLogger("com.cffreedom.integrations.stripe.CFStripe");
 	public final static String TEST_CC_NUMBER = "4242424242424242";
 	public final static String TEST_CC_DECLINE = "4000000000000002";
 	
@@ -110,16 +112,15 @@ public class CFStripe
 
 	public Charge orderOneTime(Token cardToken, String email, String desc, int amountInCents) throws StripeException
 	{
-		final String METHOD = "orderOneTime";
 		Stripe.apiKey = this.getApiKey();
 		
-		logger.logInfo(METHOD, "Creating customer: " + email);
+		logger.info("Creating customer: {}", email);
 		Map<String, Object> customerParams = new HashMap<String, Object>();
 		customerParams.put("card", cardToken.getId());
 		customerParams.put("email", email);
 		Customer cust = Customer.create(customerParams);
 		
-		logger.logInfo(METHOD, "Creating charge: " + amountInCents + " (" + desc + ")");
+		logger.info("Creating charge: {} ({})", amountInCents, desc);
 		Map<String, Object> chargeParams = new HashMap<String, Object>();
 		chargeParams.put("amount", amountInCents);
 		chargeParams.put("description", desc);

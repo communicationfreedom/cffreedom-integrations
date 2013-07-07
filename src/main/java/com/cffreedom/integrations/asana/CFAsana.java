@@ -9,6 +9,8 @@ import org.apache.commons.codec.binary.Base64;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.ParseException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
@@ -16,7 +18,6 @@ import com.cffreedom.beans.Task;
 import com.cffreedom.utils.ConversionUtils;
 import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
-import com.cffreedom.utils.LoggerUtil;
 import com.cffreedom.utils.Utils;
 import com.cffreedom.utils.net.HttpUtils;
 
@@ -40,7 +41,7 @@ import com.cffreedom.utils.net.HttpUtils;
 public class CFAsana
 {
 	private final String URL_AUTH = "https://app.asana.com/api/1.0/users/me";
-	private final LoggerUtil logger = new LoggerUtil(LoggerUtil.FAMILY_TASK, this.getClass().getPackage().getName() + "." + this.getClass().getSimpleName());
+	private static final Logger logger = LoggerFactory.getLogger("com.cffreedom.integrations.asana.CFAsana");
 	private String apiKey;
 	private String authVal;
 	private JSONObject userData;
@@ -102,8 +103,7 @@ public class CFAsana
 
 	public ArrayList<Project> getProjects(Container workspace) throws IOException, ParseException
 	{
-		final String METHOD = "getProjects";
-		logger.logDebug(METHOD, "Getting projects for workspace: " + workspace.getValue());
+		logger.debug("Getting projects for workspace: {}", workspace.getValue());
 		ArrayList<Project> projects = new ArrayList<Project>();
 
 		try
@@ -133,7 +133,7 @@ public class CFAsana
 		}
 		catch (Exception e)
 		{
-			logger.logWarn(METHOD, e.getMessage());
+			logger.error(e.getMessage());
 		}
 
 		return projects;
@@ -141,8 +141,7 @@ public class CFAsana
 
 	public ArrayList<Task> getTasks(Container workspace, Project project) throws IOException, ParseException
 	{
-		final String METHOD = "getTasks";
-		logger.logDebug(METHOD, "Getting tasks for project: " + project.getName());
+		logger.debug("Getting tasks for project: {}", project.getName());
 		ArrayList<Task> tasks = new ArrayList<Task>();
 
 		try
@@ -176,16 +175,15 @@ public class CFAsana
 		}
 		catch (Exception e)
 		{
-			logger.logWarn(METHOD, e.getMessage());
+			logger.error(e.getMessage());
 		}
 
-		logger.logInfo(METHOD, "Returning " + tasks.size() + " tasks for project " + project.getName());
+		logger.info("Returning {} tasks for project {}", tasks.size(), project.getName());
 		return tasks;
 	}
 
 	public ArrayList<Task> getTasks(Container workspace) throws IOException, ParseException
 	{
-		final String METHOD = "getTasks";
 		ArrayList<Project> projects = this.getProjects(workspace);
 		ArrayList<Task> tasks = new ArrayList<Task>();
 
@@ -197,13 +195,12 @@ public class CFAsana
 			}
 		}
 
-		logger.logInfo(METHOD, "Returning " + tasks.size() + " tasks for workspace " + workspace.getValue());
+		logger.info("Returning {} tasks for workspace {}", tasks.size(), workspace.getValue());
 		return tasks;
 	}
 
 	public ArrayList<Container> getTags(Task task) throws IOException, ParseException
 	{
-		final String METHOD = "getTags";
 		ArrayList<Container> tags = new ArrayList<Container>();
 
 		try
@@ -231,7 +228,7 @@ public class CFAsana
 		}
 		catch (Exception e)
 		{
-			logger.logWarn(METHOD, e.getMessage());
+			logger.error(e.getMessage());
 		}
 
 		return tags;

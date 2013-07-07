@@ -5,7 +5,9 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-import com.cffreedom.utils.LoggerUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
 import com.twilio.sdk.TwilioRestResponse;
@@ -47,7 +49,7 @@ import com.twilio.sdk.verbs.Say;
  */
 public class CFTwilio
 {
-	private final LoggerUtil logger = new LoggerUtil(LoggerUtil.FAMILY_SWITCHBOARD, this.getClass().getPackage().getName() + "." + this.getClass().getSimpleName());
+	private static final Logger logger = LoggerFactory.getLogger("com.cffreedom.integrations.twilio.CFTwilio");
 	private String m_sAccountSID = null;
 	private String m_sAuthToken = null;
 	private TwilioRestClient m_oRestClient = null;
@@ -60,7 +62,7 @@ public class CFTwilio
 
 	public CFTwilio(String accountSID, String authToken)
 	{
-		logger.logDebug("constructor", "Initializing");
+		logger.debug("Initializing");
 		this.m_sAccountSID = accountSID;
 		this.m_sAuthToken = authToken;
 		this.m_oRestClient = new TwilioRestClient(this.m_sAccountSID, this.m_sAuthToken);
@@ -71,8 +73,7 @@ public class CFTwilio
 
 	public String makeCall(String systemNumber, String to, String onceConnectedUrl) throws TwilioRestException
 	{
-		final String METHOD = "makeCall";
-		logger.logDebug(METHOD, systemNumber + "/" + to + "/" + onceConnectedUrl);
+		logger.debug("{}/{}/{}", systemNumber, to, onceConnectedUrl);
 		
 		final CallFactory callFactory = this.getAccount().getCallFactory();
 		final Map<String, String> callParams = new HashMap<String, String>();
@@ -85,8 +86,7 @@ public class CFTwilio
 
 	public String sendSms(String systemNumber, String to, String msg) throws TwilioRestException
 	{
-		final String METHOD = "sendSms";
-		logger.logDebug(METHOD, systemNumber + "/" + to + "/" + msg);
+		logger.debug("{}/{}/{}", systemNumber, to, msg);
 		
 		final SmsFactory smsFactory = this.getAccount().getSmsFactory();
 		final Map<String, String> smsParams = new HashMap<String, String>();
@@ -100,8 +100,7 @@ public class CFTwilio
 
 	public String twimlGetInput(String prompt, int digits, int timeout, String afterInputUrl) throws TwiMLException
 	{
-		final String METHOD = "twimlGetInput";
-		logger.logDebug(METHOD, prompt + "/" + digits + "/" + timeout + "/" + afterInputUrl);
+		logger.debug("{}/{}/{}/{}", prompt, digits, timeout, afterInputUrl);
 		
 		// http://www.twilio.com/docs/quickstart/java/twiml/record-caller-leave-message
 		TwiMLResponse resp = new TwiMLResponse();
@@ -122,8 +121,7 @@ public class CFTwilio
 
 	public String twimlDial(String number) throws TwiMLException
 	{
-		final String METHOD = "twimlDial";
-		logger.logDebug(METHOD, number);
+		logger.debug("{}", number);
 		
 		TwiMLResponse resp = new TwiMLResponse();
 		Dial dial = new Dial(number);
