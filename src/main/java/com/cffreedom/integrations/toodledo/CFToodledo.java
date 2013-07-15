@@ -80,7 +80,7 @@ public class CFToodledo
 		
 		try
 		{
-			tokenFile = SystemUtils.getTempDir() + SystemUtils.getPathSeparator() + "CFToodledo.tokens";
+			tokenFile = SystemUtils.getDirTemp() + SystemUtils.getPathSeparator() + "CFToodledo.tokens";
 			tokenCache = new KeyValueFileMgr(tokenFile);
 			if (tokenCache.keyExists(this.getUserEmail()) == true)
 			{
