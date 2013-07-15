@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
 import com.cffreedom.beans.Task;
-import com.cffreedom.utils.ConversionUtils;
+import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
 import com.cffreedom.utils.KeyValueFileMgr;
@@ -87,7 +87,7 @@ public class CFToodledo
 				String cachedVal = tokenCache.getEntryAsString(this.getUserEmail());
 				logger.debug("Cached token exists for: {}, value: {}", this.getUserEmail(), cachedVal);
 				String[] value = cachedVal.split("\\|");
-				if (ConversionUtils.toDate(value[1], DateTimeUtils.MASK_FULL_TIMESTAMP).after(DateTimeUtils.dateAdd(new Date(), -2, DateTimeUtils.DATE_PART_HOUR)) == true)
+				if (Convert.toDate(value[1], DateTimeUtils.MASK_FULL_TIMESTAMP).after(DateTimeUtils.dateAdd(new Date(), -2, DateTimeUtils.DATE_PART_HOUR)) == true)
 				{
 					logger.debug("Using cached token");
 					this.token = value[0];
@@ -104,12 +104,12 @@ public class CFToodledo
 		if (this.token == null)
 		{
 			logger.debug("No cached token so lets go get one");
-			String sig = ConversionUtils.toMd5(this.getUserEmail() + this.apiToken);
+			String sig = Convert.toMd5(this.getUserEmail() + this.apiToken);
 			String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
 			String response = HttpUtils.httpGet(url).getDetail();
 			JSONObject jsonObj = JsonUtils.getJsonObject(response);
 			String userId = JsonUtils.getJsonObjectStringVal(jsonObj, "userid");
-			String encodedLogin = ConversionUtils.toMd5(userId + this.apiToken);
+			String encodedLogin = Convert.toMd5(userId + this.apiToken);
 			url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
 			response = HttpUtils.httpGet(url).getDetail();
 			jsonObj = JsonUtils.getJsonObject(response);
@@ -117,7 +117,7 @@ public class CFToodledo
 			
 			try
 			{
-				if (tokenCache.addEntry(this.getUserEmail(), this.token + "|" + ConversionUtils.toString(new Date(), DateTimeUtils.MASK_FULL_TIMESTAMP)) == true)
+				if (tokenCache.addEntry(this.getUserEmail(), this.token + "|" + Convert.toString(new Date(), DateTimeUtils.MASK_FULL_TIMESTAMP)) == true)
 				{
 					logger.debug("Stored token in cache file");
 				}
@@ -127,7 +127,7 @@ public class CFToodledo
 		
 		logger.debug("Token: {}", this.token);
 
-		this.key = ConversionUtils.toMd5(ConversionUtils.toMd5(this.getUserPass()) + this.apiToken + this.getToken());
+		this.key = Convert.toMd5(Convert.toMd5(this.getUserPass()) + this.apiToken + this.getToken());
 	}
 
 	private String getUserEmail()
@@ -200,29 +200,29 @@ public class CFToodledo
 			
 			try{
 				Long dueTimeL = JsonUtils.getJsonObjectLongVal(task, "duetime");
-				if (dueTimeL != null) { dueTime = DateTimeUtils.gmtToLocal(ConversionUtils.toDate(dueTimeL.longValue()*1000)); Utils.output(dueTime + "<-- converted"); }
+				if (dueTimeL != null) { dueTime = DateTimeUtils.gmtToLocal(Convert.toDate(dueTimeL.longValue()*1000)); Utils.output(dueTime + "<-- converted"); }
 			}catch (Exception e){
 				// If it's not a long it's going to be a string w/ a value of "0" for no time
 				String dueTimeS = JsonUtils.getJsonObjectStringVal(task, "duetime");
 				if (dueTimeS != null) 
 				{ 
-					if (dueTimeS.equalsIgnoreCase("0") == true) { dueTime = ConversionUtils.toDate("1900-01-01 00:00:00", DateTimeUtils.MASK_FILE_TIMESTAMP); }
-					else { dueTime = ConversionUtils.toDate(ConversionUtils.toLong(dueTimeS)*1000); }
+					if (dueTimeS.equalsIgnoreCase("0") == true) { dueTime = Convert.toDate("1900-01-01 00:00:00", DateTimeUtils.MASK_FILE_TIMESTAMP); }
+					else { dueTime = Convert.toDate(Convert.toLong(dueTimeS)*1000); }
 				}
 			}
 			
 			if (startL != null)
 			{
-				startDate = ConversionUtils.toDate(startL.longValue()*1000);
+				startDate = Convert.toDate(startL.longValue()*1000);
 				if (startTimeS != null)
 				{
-					startTime = ConversionUtils.toDate(ConversionUtils.toLong(startTimeS)*1000);
+					startTime = Convert.toDate(Convert.toLong(startTimeS)*1000);
 					startDate = DateTimeUtils.combineDates(startDate, startTime);
 				}
 			}
 			if (dueL != null)
 			{
-				dueDate = ConversionUtils.toDate(dueL.longValue()*1000);
+				dueDate = Convert.toDate(dueL.longValue()*1000);
 				if (dueTime != null){ dueDate = DateTimeUtils.combineDates(dueDate, dueTime); }
 			}
 			

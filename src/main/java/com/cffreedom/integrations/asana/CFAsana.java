@@ -15,7 +15,7 @@ import org.slf4j.LoggerFactory;
 import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
 import com.cffreedom.beans.Task;
-import com.cffreedom.utils.ConversionUtils;
+import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
 import com.cffreedom.utils.Utils;
@@ -92,7 +92,7 @@ public class CFAsana
 		{
 			JSONObject workspace = iterator.next();
 			Long id = JsonUtils.getJsonObjectLongVal(workspace, "id");
-			String code = ConversionUtils.toString(id);
+			String code = Convert.toString(id);
 			String name = JsonUtils.getJsonObjectStringVal(workspace, "name");
 
 			workspaces.add(new Container(code, name));
@@ -120,7 +120,7 @@ public class CFAsana
 			{
 				JSONObject task = iterator.next();
 				Long id = JsonUtils.getJsonObjectLongVal(task, "id");
-				String code = ConversionUtils.toString(id);
+				String code = Convert.toString(id);
 				String name = JsonUtils.getJsonObjectStringVal(task, "name");
 				String note = JsonUtils.getJsonObjectStringVal(task, "notes");
 				String syncCode = this.getProjectSyncCode(name);
@@ -157,12 +157,12 @@ public class CFAsana
 				JSONObject task = iterator.next();
 				//Utils.output(task.toJSONString());
 				Long id = JsonUtils.getJsonObjectLongVal(task, "id");
-				String code = ConversionUtils.toString(id);
+				String code = Convert.toString(id);
 				String title = JsonUtils.getJsonObjectStringVal(task, "name");
 				String meta = "";
 				String note = JsonUtils.getJsonObjectStringVal(task, "notes");
 				String due = JsonUtils.getJsonObjectStringVal(task, "due_on");		
-				Date dueDate = ConversionUtils.toDate(due, DateTimeUtils.MASK_FILE_DATESTAMP);
+				Date dueDate = Convert.toDate(due, DateTimeUtils.MASK_FILE_DATESTAMP);
 
 				if (code != null)
 				{
@@ -217,7 +217,7 @@ public class CFAsana
 			{
 				JSONObject tag = iterator.next();
 				Long id = JsonUtils.getJsonObjectLongVal(tag, "id");
-				String code = ConversionUtils.toString(id);
+				String code = Convert.toString(id);
 				String name = JsonUtils.getJsonObjectStringVal(tag, "name");
 
 				if (code != null)

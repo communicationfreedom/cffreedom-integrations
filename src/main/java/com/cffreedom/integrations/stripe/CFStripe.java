@@ -7,7 +7,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.cffreedom.utils.ConversionUtils;
+import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
 import com.stripe.Stripe;
 import com.stripe.exception.StripeException;
@@ -94,8 +94,8 @@ public class CFStripe
 
 	public Customer order(Token cardToken, String email, String desc, String planCode, Date planStartDate) throws StripeException
 	{
-		Date today = ConversionUtils.toDateNoTime(new Date());
-		planStartDate = ConversionUtils.toDateNoTime(planStartDate);
+		Date today = Convert.toDateNoTime(new Date());
+		planStartDate = Convert.toDateNoTime(planStartDate);
 		
 		Stripe.apiKey = this.getApiKey();
 		Map<String, Object> customerParams = new HashMap<String, Object>();
