@@ -55,13 +55,16 @@ public class CFTwilio
 
 	public CFTwilio(String accountSID, String authToken)
 	{
-		logger.debug("Initializing");
+		logger.debug("Initializing account: {}", accountSID);
 		this.accountSID = accountSID;
 		this.authToken = authToken;
+		logger.trace("Getting TwilioRestClient");
 		this.restClient = new TwilioRestClient(this.accountSID, this.authToken);
 
 		// Get the main account (The one we used to authenticate the client)
+		logger.trace("Getting Account from TwilioRestClient");
 		this.account = this.restClient.getAccount();
+		logger.debug("Initialized");
 	}
 
 	private Account getAccount()
@@ -84,7 +87,7 @@ public class CFTwilio
 
 	public String sendSms(String systemNumber, String to, String msg) throws TwilioRestException
 	{
-		logger.debug("{}/{}/{}", systemNumber, to, msg);
+		logger.debug("Sending SMS: {}/{}/{}", systemNumber, to, msg);
 		
 		final SmsFactory smsFactory = this.getAccount().getSmsFactory();
 		final Map<String, String> smsParams = new HashMap<String, String>();
@@ -93,6 +96,7 @@ public class CFTwilio
 												// number in your account
 		smsParams.put("Body", msg);
 		final Sms sms = smsFactory.create(smsParams);
+		logger.debug("Sent SMS: {}", sms.getSid());
 		return sms.getSid();
 	}
 
