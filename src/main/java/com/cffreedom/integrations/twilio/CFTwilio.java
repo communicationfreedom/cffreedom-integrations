@@ -1,8 +1,6 @@
 package com.cffreedom.integrations.twilio;
 
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -50,25 +48,25 @@ import com.twilio.sdk.verbs.Say;
 public class CFTwilio
 {
 	private static final Logger logger = LoggerFactory.getLogger("com.cffreedom.integrations.twilio.CFTwilio");
-	private String m_sAccountSID = null;
-	private String m_sAuthToken = null;
-	private TwilioRestClient m_oRestClient = null;
-	private Account m_oAccount = null;
-
-	private Account getAccount()
-	{
-		return this.m_oAccount;
-	}
+	private String accountSID = null;
+	private String authToken = null;
+	private TwilioRestClient restClient = null;
+	private Account account = null;
 
 	public CFTwilio(String accountSID, String authToken)
 	{
 		logger.debug("Initializing");
-		this.m_sAccountSID = accountSID;
-		this.m_sAuthToken = authToken;
-		this.m_oRestClient = new TwilioRestClient(this.m_sAccountSID, this.m_sAuthToken);
+		this.accountSID = accountSID;
+		this.authToken = authToken;
+		this.restClient = new TwilioRestClient(this.accountSID, this.authToken);
 
 		// Get the main account (The one we used to authenticate the client)
-		this.m_oAccount = this.m_oRestClient.getAccount();
+		this.account = this.restClient.getAccount();
+	}
+
+	private Account getAccount()
+	{
+		return this.account;
 	}
 
 	public String makeCall(String systemNumber, String to, String onceConnectedUrl) throws TwilioRestException
