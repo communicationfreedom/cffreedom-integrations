@@ -6,23 +6,18 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.cffreedom.exceptions.InfrastructureException;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
-import com.twilio.sdk.TwilioRestResponse;
 import com.twilio.sdk.resource.factory.CallFactory;
 import com.twilio.sdk.resource.factory.SmsFactory;
 import com.twilio.sdk.resource.instance.Account;
-import com.twilio.sdk.resource.instance.AvailablePhoneNumber;
 import com.twilio.sdk.resource.instance.Call;
-import com.twilio.sdk.resource.instance.Conference;
-import com.twilio.sdk.resource.instance.Participant;
 import com.twilio.sdk.resource.instance.Sms;
-import com.twilio.sdk.resource.list.AccountList;
-import com.twilio.sdk.resource.list.AvailablePhoneNumberList;
-import com.twilio.sdk.resource.list.ParticipantList;
 import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
 import com.twilio.sdk.verbs.Hangup;
+import com.twilio.sdk.verbs.Reject;
 import com.twilio.sdk.verbs.TwiMLException;
 import com.twilio.sdk.verbs.TwiMLResponse;
 import com.twilio.sdk.verbs.Say;
@@ -47,7 +42,7 @@ import com.twilio.sdk.verbs.Say;
  */
 public class CFTwilio
 {
-	private static final Logger logger = LoggerFactory.getLogger("com.cffreedom.integrations.twilio.CFTwilio");
+	private static final Logger logger = LoggerFactory.getLogger(CFTwilio.class);
 	private String accountSID = null;
 	private String authToken = null;
 	private TwilioRestClient restClient = null;
@@ -72,63 +67,156 @@ public class CFTwilio
 		return this.account;
 	}
 
-	public String makeCall(String systemNumber, String to, String onceConnectedUrl) throws TwilioRestException
+	/**
+	 * Make an outbound call
+	 * @param systemNumber
+	 * @param to
+	 * @param afterConnectedUrl URL Twilio should call after the call is connected
+	 * @return Call SID
+	 * @throws InfrastructureException
+	 */
+	public String makeCall(String systemNumber, String to, String afterConnectedUrl) throws InfrastructureException
 	{
-		logger.debug("{}/{}/{}", systemNumber, to, onceConnectedUrl);
+		logger.debug("{}/{}/{}", systemNumber, to, afterConnectedUrl);
 		
-		final CallFactory callFactory = this.getAccount().getCallFactory();
-		final Map<String, String> callParams = new HashMap<String, String>();
-		callParams.put("To", to);
-		callParams.put("From", systemNumber);
-		callParams.put("Url", onceConnectedUrl);
-		final Call call = callFactory.create(callParams);
-		return call.getSid();
+		try
+		{
+			final CallFactory callFactory = this.getAccount().getCallFactory();
+			final Map<String, String> callParams = new HashMap<String, String>();
+			callParams.put("To", to);
+			callParams.put("From", systemNumber);
+			callParams.put("Url", afterConnectedUrl);
+			final Call call = callFactory.create(callParams);
+			return call.getSid();
+		}
+		catch (TwilioRestException e)
+		{
+			throw new InfrastructureException("Error making call: " + e.getMessage(), e);
+		}
+	}
+	
+	public String twimlRejectCall() throws InfrastructureException
+	{
+		logger.debug("Rejecting call");
+		
+		try
+		{
+			TwiMLResponse resp = new TwiMLResponse();
+			Reject reject = new Reject();
+	
+			resp.append(reject);
+			return getFullXmlTwiML(resp.toXML());
+		}
+		catch (TwiMLException e)
+		{
+			throw new InfrastructureException("Error: " + e.getMessage(), e);
+		}
+	}
+	
+	/**
+	 * Say something and then hang up / disconnect the call
+	 * @param msg
+	 * @return TWIML XML
+	 * @throws InfrastructureException
+	 */
+	public String twimlSayAndHangUp(String msg) throws InfrastructureException
+	{		
+		try
+		{
+			TwiMLResponse resp = new TwiMLResponse();
+			Say say = new Say(msg);
+			resp.append(say);
+			resp.append(new Hangup());
+			return getFullXmlTwiML(resp.toXML());
+		}
+		catch (TwiMLException e)
+		{
+			throw new InfrastructureException("Error: " + e.getMessage(), e);
+		}
 	}
 
-	public String sendSms(String systemNumber, String to, String msg) throws TwilioRestException
+	/**
+	 * Send a SMS message
+	 * @param systemNumber
+	 * @param to
+	 * @param msg
+	 * @return SMS SID
+	 * @throws InfrastructureException
+	 */
+	public String sendSms(String systemNumber, String to, String msg) throws InfrastructureException
 	{
 		logger.debug("Sending SMS: {}/{}/{}", systemNumber, to, msg);
 		
-		final SmsFactory smsFactory = this.getAccount().getSmsFactory();
-		final Map<String, String> smsParams = new HashMap<String, String>();
-		smsParams.put("To", to); // Replace with a valid phone number
-		smsParams.put("From", systemNumber); // Replace with a valid phone
-												// number in your account
-		smsParams.put("Body", msg);
-		final Sms sms = smsFactory.create(smsParams);
-		logger.debug("Sent SMS: {}", sms.getSid());
-		return sms.getSid();
+		try
+		{
+			final SmsFactory smsFactory = this.getAccount().getSmsFactory();
+			final Map<String, String> smsParams = new HashMap<String, String>();
+			smsParams.put("To", to); // Replace with a valid phone number
+			smsParams.put("From", systemNumber); // Replace with a valid phone
+													// number in your account
+			smsParams.put("Body", msg);
+			final Sms sms = smsFactory.create(smsParams);
+			logger.debug("Sent SMS: {}", sms.getSid());
+			return sms.getSid();
+		}
+		catch (TwilioRestException e)
+		{
+			throw new InfrastructureException("Error sending SMS: " + e.getMessage(), e);
+		}
 	}
 
-	public String twimlGetInput(String prompt, int digits, int timeout, String afterInputUrl) throws TwiMLException
+	/**
+	 * 
+	 * @param prompt What to say to the caller
+	 * @param digits Number of digits we're expecting the caller to enter
+	 * @param timeout How long to wait in seconds
+	 * @param afterInputUrl URL Twilio should call after getting input
+	 * @return  TWIML XML
+	 * @throws InfrastructureException
+	 */
+	public String twimlGetInput(String prompt, int digits, int timeout, String afterInputUrl) throws InfrastructureException
 	{
 		logger.debug("{}/{}/{}/{}", prompt, digits, timeout, afterInputUrl);
 		
-		// http://www.twilio.com/docs/quickstart/java/twiml/record-caller-leave-message
-		TwiMLResponse resp = new TwiMLResponse();
-		Say say = new Say(prompt);
-
-		Gather gather = new Gather();
-		gather.setAction(afterInputUrl);
-		gather.setNumDigits(digits);
-		gather.setMethod("GET");
-		gather.setTimeout(timeout);
-		gather.append(say);
-
-		resp.append(gather);
-		// If we get past the gather the request timed out
-		resp.append(new Hangup());
-		return getFullXmlTwiML(resp.toXML());
+		try
+		{
+			// http://www.twilio.com/docs/quickstart/java/twiml/record-caller-leave-message
+			TwiMLResponse resp = new TwiMLResponse();
+			Say say = new Say(prompt);
+	
+			Gather gather = new Gather();
+			gather.setAction(afterInputUrl);
+			gather.setNumDigits(digits);
+			gather.setMethod("GET");
+			gather.setTimeout(timeout);
+			gather.append(say);
+	
+			resp.append(gather);
+			// If we get past the gather the request timed out
+			resp.append(new Hangup());
+			return getFullXmlTwiML(resp.toXML());
+		}
+		catch (TwiMLException e)
+		{
+			throw new InfrastructureException("Error in twimlGetInput: " + e.getMessage(), e);
+		}
 	}
 
-	public String twimlDial(String number) throws TwiMLException
+	public String twimlDial(String number) throws InfrastructureException
 	{
 		logger.debug("{}", number);
 		
-		TwiMLResponse resp = new TwiMLResponse();
-		Dial dial = new Dial(number);
-		resp.append(dial);
-		return getFullXmlTwiML(resp.toXML());
+		try
+		{
+			TwiMLResponse resp = new TwiMLResponse();
+			Dial dial = new Dial(number);
+			resp.append(dial);
+			return getFullXmlTwiML(resp.toXML());
+		}
+		catch (TwiMLException e)
+		{
+			throw new InfrastructureException("Error in twimlDial: " + e.getMessage(), e);
+		}
 	}
 
 	private String getFullXmlTwiML(String xml)

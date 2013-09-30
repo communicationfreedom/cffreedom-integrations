@@ -2,17 +2,26 @@ package com.cffreedom.integrations.stripe;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.cffreedom.exceptions.DoesNotExistException;
 import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
 import com.stripe.Stripe;
+import com.stripe.exception.APIConnectionException;
+import com.stripe.exception.APIException;
+import com.stripe.exception.AuthenticationException;
+import com.stripe.exception.CardException;
+import com.stripe.exception.InvalidRequestException;
 import com.stripe.exception.StripeException;
+import com.stripe.model.Card;
 import com.stripe.model.Charge;
 import com.stripe.model.Customer;
+import com.stripe.model.CustomerCardCollection;
 import com.stripe.model.Plan;
 import com.stripe.model.Subscription;
 import com.stripe.model.Token;
@@ -33,29 +42,69 @@ import com.stripe.model.Token;
  */
 public class CFStripe
 {
-	private static final Logger logger = LoggerFactory.getLogger("com.cffreedom.integrations.stripe.CFStripe");
+	private static final Logger logger = LoggerFactory.getLogger(CFStripe.class);
 	public final static String TEST_CC_NUMBER = "4242424242424242";
 	public final static String TEST_CC_DECLINE = "4000000000000002";
+	public final static String INTERVAL_MONTHLY = "month";
+	public final static String CURRENCY_USD = "usd";
 	
 	private String apiKey = null;
 	
 	public CFStripe(String apiKey)
 	{
+		logger.debug("Initializing");
 		this.apiKey = apiKey;
+		logger.debug("Initialized");
 	}
 
 	private String getApiKey()
 	{
 		return this.apiKey;
 	}
+	
+	public Plan getPlan(String planCode) throws DoesNotExistException
+	{
+		try
+		{
+			Stripe.apiKey = this.getApiKey();
+			return Plan.retrieve(planCode);
+		}
+		catch (Exception e)
+		{
+			throw new DoesNotExistException("PlanCode "+planCode+" does not exist");
+		}
+	}
 
+	/**
+	 * Create a new monthly plan billed in USD
+	 * @param planCode
+	 * @param name
+	 * @param amountInCents
+	 * @return The new Plan object
+	 * @throws StripeException
+	 */
 	public Plan createPlan(String planCode, String name, int amountInCents) throws StripeException
+	{
+		return createPlan(planCode, name, amountInCents, CFStripe.INTERVAL_MONTHLY, CFStripe.CURRENCY_USD);
+	}
+	
+	/**
+	 * Create a new plan with the specified information
+	 * @param planCode
+	 * @param name
+	 * @param amountInCents
+	 * @param interval
+	 * @param currency
+	 * @return The new Plan object
+	 * @throws StripeException
+	 */
+	public Plan createPlan(String planCode, String name, int amountInCents, String interval, String currency) throws StripeException
 	{
 		Stripe.apiKey = this.getApiKey();
 		Map<String, Object> planParams = new HashMap<String, Object>();
-		planParams.put("interval", "month");
+		planParams.put("interval", interval);
 		planParams.put("id", planCode);
-		planParams.put("currency", "usd");
+		planParams.put("currency", currency);
 		planParams.put("name", name);
 		planParams.put("amount", amountInCents);
 		return Plan.create(planParams);
@@ -63,19 +112,25 @@ public class CFStripe
 
 	public void deletePlan(String planCode) throws StripeException
 	{
+		logger.warn("Deleting plan: {}", planCode);
 		Stripe.apiKey = this.getApiKey();
 		Plan plan = Plan.retrieve(planCode);
 		plan.delete();
 	}
 
+	/**
+	 * Create a token for a credit card
+	 * @param cardholderName
+	 * @param cardNum
+	 * @param secCode
+	 * @param expMonth
+	 * @param expYear
+	 * @return Token object representing the credit card
+	 * @throws StripeException
+	 */
 	public Token createCardToken(String cardholderName, String cardNum, String secCode, int expMonth, int expYear) throws StripeException
 	{
-		return createCardToken(this.getApiKey(), cardholderName, cardNum, secCode, expMonth, expYear);
-	}
-	
-	public static Token createCardToken(String apiKey, String cardholderName, String cardNum, String secCode, int expMonth, int expYear) throws StripeException
-	{
-		Stripe.apiKey = apiKey;
+		Stripe.apiKey = this.getApiKey();
 		Map<String, Object> tokenParams = new HashMap<String, Object>();
 		Map<String, Object> cardParams = new HashMap<String, Object>();
 		cardParams.put("name", cardholderName);
@@ -92,8 +147,19 @@ public class CFStripe
 		return order(cardToken, email, desc, planCode, new Date());
 	}
 
+	/**
+	 * Create a new customer and and add them to a predefined plan
+	 * @param cardToken
+	 * @param email
+	 * @param desc
+	 * @param planCode
+	 * @param planStartDate
+	 * @return
+	 * @throws StripeException
+	 */
 	public Customer order(Token cardToken, String email, String desc, String planCode, Date planStartDate) throws StripeException
 	{
+		logger.info("Ordering plan {} for {}", planCode, email);
 		Date today = Convert.toDateNoTime(new Date());
 		planStartDate = Convert.toDateNoTime(planStartDate);
 		
@@ -110,8 +176,18 @@ public class CFStripe
 		return Customer.create(customerParams);
 	}
 
+	/**
+	 * Create a one time order for a specific amount
+	 * @param cardToken
+	 * @param email
+	 * @param desc
+	 * @param amountInCents
+	 * @return
+	 * @throws StripeException
+	 */
 	public Charge orderOneTime(Token cardToken, String email, String desc, int amountInCents) throws StripeException
 	{
+		logger.info("Creating one time charge in the amount of {} cents for {}", amountInCents, email);
 		Stripe.apiKey = this.getApiKey();
 		
 		logger.info("Creating customer: {}", email);
@@ -129,7 +205,14 @@ public class CFStripe
 		return Charge.create(chargeParams);
 	}
 	
-	public Subscription updateOrder(String custCode, String newPlanCode) throws StripeException
+	/**
+	 * Change an existing order to a new/different plan. Will automatically prorate the change.
+	 * @param custCode
+	 * @param newPlanCode
+	 * @return Updated Subscription object
+	 * @throws StripeException
+	 */
+	public Subscription updateOrderPlan(String custCode, String newPlanCode) throws StripeException
 	{
 		Stripe.apiKey = this.getApiKey();
 		Customer c = Customer.retrieve(custCode);
@@ -139,14 +222,55 @@ public class CFStripe
 		return c.updateSubscription(subscriptionParams);
 	}
 	
-	public Subscription updateCreditCard(Token cardToken, String custCode, String planCode) throws StripeException
+	/**
+	 * Add a credit card to an existing customer
+	 * @param cardToken
+	 * @param custCode
+	 * @return The Card object created
+	 * @throws StripeException
+	 */
+	public Card addCreditCardToCust(Token cardToken, String custCode) throws StripeException
 	{
-		return updateCreditCard(this.getApiKey(), cardToken, custCode, planCode);
+		Stripe.apiKey = this.getApiKey();
+		Customer cu = Customer.retrieve(custCode);
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("card", cardToken.getId());
+		return cu.createCard(params);
 	}
 	
-	public static Subscription updateCreditCard(String apiKey, Token cardToken, String custCode, String planCode) throws StripeException
+	/**
+	 * Remove an existing card on a customer
+	 * @param cardCode
+	 * @param custCode
+	 * @return True if successful, false otherwise
+	 * @throws StripeException
+	 */
+	public boolean deleteCreditCardForCust(String cardCode, String custCode) throws StripeException
 	{
-		Stripe.apiKey = apiKey;
+		Stripe.apiKey = this.getApiKey();
+		Customer cu = Customer.retrieve(custCode);
+		for(Card card : cu.getCards().getData())
+		{
+			if(card.getId().equals(cardCode))
+			{
+				card.delete();
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	/**
+	 * Update the credit card used to bill a specific order for a specific customer
+	 * @param cardToken
+	 * @param custCode
+	 * @param planCode
+	 * @return
+	 * @throws StripeException
+	 */
+	public Subscription updateOrderCreditCard(Token cardToken, String custCode, String planCode) throws StripeException
+	{
+		Stripe.apiKey = this.getApiKey();
 		Customer c = Customer.retrieve(custCode);
 		Map<String, Object> subscriptionParams = new HashMap<String, Object>();
 		subscriptionParams.put("plan", planCode);
@@ -162,13 +286,17 @@ public class CFStripe
 		return cu.cancelSubscription();
 	}
 
-	public Customer getCustomer(String id) throws StripeException
+	public Customer getCustomer(String custCode) throws StripeException
 	{
-		return Customer.retrieve(id);
+		return Customer.retrieve(custCode);
 	}
 	
-	public static String test()
+	public List<Card> getCustomerCards(String custCode) throws StripeException
 	{
-		return "Hi from static test()";
+		Customer inv = Customer.retrieve(custCode);
+		Map<String, Object> cardParams = new HashMap<String, Object>();
+		cardParams.put("count", 10);
+		CustomerCardCollection cards = inv.getCards().all(cardParams);
+		return cards.getData();
 	}
 }
