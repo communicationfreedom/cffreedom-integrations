@@ -223,6 +223,19 @@ public class CFStripe
 	}
 	
 	/**
+	 * Get a specific credit card for a specific customer
+	 * @param custCode
+	 * @param cardCode
+	 * @return Card for the passed information
+	 * @throws StripeException
+	 */
+	public Card getCustomerCard(String custCode, String cardCode) throws StripeException
+	{
+		Customer cu = this.getCustomer(custCode);
+		return cu.getCards().retrieve(cardCode);
+	}
+	
+	/**
 	 * Add a credit card to an existing customer
 	 * @param cardToken
 	 * @param custCode

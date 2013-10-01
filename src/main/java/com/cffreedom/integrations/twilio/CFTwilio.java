@@ -1,8 +1,12 @@
 package com.cffreedom.integrations.twilio;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,9 +14,11 @@ import com.cffreedom.exceptions.InfrastructureException;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
 import com.twilio.sdk.resource.factory.CallFactory;
+import com.twilio.sdk.resource.factory.MessageFactory;
 import com.twilio.sdk.resource.factory.SmsFactory;
 import com.twilio.sdk.resource.instance.Account;
 import com.twilio.sdk.resource.instance.Call;
+import com.twilio.sdk.resource.instance.Message;
 import com.twilio.sdk.resource.instance.Sms;
 import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
@@ -39,6 +45,9 @@ import com.twilio.sdk.verbs.Say;
  * Reference:
  * https://github.com/twilio/twilio-java
  * http://twilio.github.com/twilio-java/
+ * 
+ * Changes:
+ * 2013-09-30 	markjacobsen.net 	Added sendMms(), twimlRejectCall(), and twimlSayAndHangUp()
  */
 public class CFTwilio
 {
@@ -162,6 +171,37 @@ public class CFTwilio
 		catch (TwilioRestException e)
 		{
 			throw new InfrastructureException("Error sending SMS: " + e.getMessage(), e);
+		}
+	}
+
+	/**
+	 * Send a MMS message
+	 * @param systemNumber
+	 * @param to
+	 * @param msg
+	 * @imageUrl
+	 * @return MMS SID
+	 * @throws InfrastructureException
+	 */
+	public String sendMms(String systemNumber, String to, String msg, String imageUrl) throws InfrastructureException
+	{
+		logger.debug("Sending MMS: {}/{}/{}/{}", systemNumber, to, msg, imageUrl);
+		
+		try
+		{
+			final MessageFactory msgFactory = this.getAccount().getMessageFactory();
+			final List<NameValuePair> msgParams = new ArrayList<NameValuePair>();
+			msgParams.add(new BasicNameValuePair("To", to)); // Replace with a valid phone number
+			msgParams.add(new BasicNameValuePair("From", systemNumber)); // Replace with a valid phone number in your account
+			msgParams.add(new BasicNameValuePair("Body", msg));
+			msgParams.add(new BasicNameValuePair("MediaUrl", imageUrl));
+			final Message message = msgFactory.create(msgParams);
+			logger.debug("Sent MMS: {}", message.getSid());
+			return message.getSid();
+		}
+		catch (TwilioRestException e)
+		{
+			throw new InfrastructureException("Error sending MMS: " + e.getMessage(), e);
 		}
 	}
 
