@@ -39,6 +39,9 @@ import com.stripe.model.Token;
  * 1) Donating: http://www.communicationfreedom.com/go/donate/
  * 2) Shoutout on twitter: @MarkJacobsen or @cffreedom
  * 3) Linking to: http://visit.markjacobsen.net
+ * 
+ * Changes:
+ * 2013-10-05 	markjacobsen.net 	Added chargeCustomer()
  */
 public class CFStripe
 {
@@ -177,7 +180,7 @@ public class CFStripe
 	}
 
 	/**
-	 * Create a one time order for a specific amount
+	 * Create a one time order for a specific amount based on credit card info
 	 * @param cardToken
 	 * @param email
 	 * @param desc
@@ -197,6 +200,27 @@ public class CFStripe
 		Customer cust = Customer.create(customerParams);
 		
 		logger.info("Creating charge: {} ({})", amountInCents, desc);
+		Map<String, Object> chargeParams = new HashMap<String, Object>();
+		chargeParams.put("amount", amountInCents);
+		chargeParams.put("description", desc);
+		chargeParams.put("currency", "usd");
+		chargeParams.put("customer", cust.getId());
+		return Charge.create(chargeParams);
+	}
+	
+	/**
+	 * Create a one time charge for a specific amount for a specific customer
+	 * @param custCode
+	 * @param desc
+	 * @param amountInCents
+	 * @return
+	 * @throws StripeException
+	 */
+	public Charge chargeCustomer(String custCode, String desc, int amountInCents) throws StripeException
+	{
+		logger.info("Creating one time charge in the amount of {} cents for {}: {}", amountInCents, custCode, desc);
+		Stripe.apiKey = this.getApiKey();
+		Customer cust = getCustomer(custCode);
 		Map<String, Object> chargeParams = new HashMap<String, Object>();
 		chargeParams.put("amount", amountInCents);
 		chargeParams.put("description", desc);
