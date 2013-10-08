@@ -8,6 +8,7 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.cffreedom.beans.CreditCard;
 import com.cffreedom.exceptions.DoesNotExistException;
 import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
@@ -42,6 +43,8 @@ import com.stripe.model.Token;
  * 
  * Changes:
  * 2013-10-05 	markjacobsen.net 	Added chargeCustomer()
+ * 2013-10-07   markjacobsen.net 	Renamed createCardToken to getCreditCardToken()
+ * 2013-10-07   markjacobsen.net 	Renamed createPlan() to addPlan()
  */
 public class CFStripe
 {
@@ -86,9 +89,9 @@ public class CFStripe
 	 * @return The new Plan object
 	 * @throws StripeException
 	 */
-	public Plan createPlan(String planCode, String name, int amountInCents) throws StripeException
+	public Plan addPlan(String planCode, String name, int amountInCents) throws StripeException
 	{
-		return createPlan(planCode, name, amountInCents, CFStripe.INTERVAL_MONTHLY, CFStripe.CURRENCY_USD);
+		return addPlan(planCode, name, amountInCents, CFStripe.INTERVAL_MONTHLY, CFStripe.CURRENCY_USD);
 	}
 	
 	/**
@@ -101,7 +104,7 @@ public class CFStripe
 	 * @return The new Plan object
 	 * @throws StripeException
 	 */
-	public Plan createPlan(String planCode, String name, int amountInCents, String interval, String currency) throws StripeException
+	public Plan addPlan(String planCode, String name, int amountInCents, String interval, String currency) throws StripeException
 	{
 		Stripe.apiKey = this.getApiKey();
 		Map<String, Object> planParams = new HashMap<String, Object>();
@@ -131,7 +134,7 @@ public class CFStripe
 	 * @return Token object representing the credit card
 	 * @throws StripeException
 	 */
-	public Token createCardToken(String cardholderName, String cardNum, String secCode, int expMonth, int expYear) throws StripeException
+	public Token getCreditCardToken(String cardholderName, String cardNum, String secCode, int expMonth, int expYear) throws StripeException
 	{
 		Stripe.apiKey = this.getApiKey();
 		Map<String, Object> tokenParams = new HashMap<String, Object>();
@@ -143,6 +146,17 @@ public class CFStripe
 		cardParams.put("exp_year", expYear);
 		tokenParams.put("card", cardParams);
 		return Token.create(tokenParams);
+	}
+	
+	/**
+	 * Same as other getCreditCardToken, just taking a CreditCard object from cffreedom-beans
+	 * @param cc
+	 * @return
+	 * @throws StripeException
+	 */
+	public Token getCreditCardToken(CreditCard cc) throws StripeException
+	{
+		return this.getCreditCardToken(cc.getFullName(), cc.getCardNum(), cc.getSecNum(), cc.getExpMonth(), cc.getExpYear());
 	}
 	
 	public Customer order(Token cardToken, String email, String desc, String planCode) throws StripeException
