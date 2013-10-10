@@ -305,13 +305,14 @@ public class CFStripe
 		if (makeDefault == false)
 		{
 			logger.debug("Creating CC");
-			Card card = cu.createCard(params);
-			logger.info("Created CC {}", card.getId());
+			cu.createCard(params);
 		}
 		else
 		{
+			logger.debug("Creating CC and making default");
 			cu.update(params);
 		}
+		logger.info("Added CC to cust {}", custCode);
 	}
 	
 	/**
