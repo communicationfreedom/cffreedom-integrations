@@ -54,25 +54,36 @@ public class CFStripe
 	public final static String INTERVAL_MONTHLY = "month";
 	public final static String CURRENCY_USD = "usd";
 	
-	private String apiKey = null;
+	//private String apiKey = null;
 	
 	public CFStripe(String apiKey)
 	{
 		logger.debug("Initializing");
-		this.apiKey = apiKey;
+		//this.apiKey = apiKey;
+		Stripe.apiKey = apiKey;
 		logger.debug("Initialized");
 	}
 
+	/*
 	private String getApiKey()
 	{
 		return this.apiKey;
+	}
+	*/
+	
+	/**
+	 * @return Stripe.apiVersion
+	 */
+	public String getVersion()
+	{
+		return Stripe.apiVersion;
 	}
 	
 	public Plan getPlan(String planCode) throws DoesNotExistException
 	{
 		try
 		{
-			Stripe.apiKey = this.getApiKey();
+			//Stripe.apiKey = this.getApiKey();
 			return Plan.retrieve(planCode);
 		}
 		catch (Exception e)
@@ -107,7 +118,7 @@ public class CFStripe
 	public Plan addPlan(String planCode, String name, int amountInCents, String interval, String currency) throws StripeException
 	{
 		logger.info("Adding plan {} named {}", planCode, name);
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Map<String, Object> planParams = new HashMap<String, Object>();
 		planParams.put("interval", interval);
 		planParams.put("id", planCode);
@@ -120,7 +131,7 @@ public class CFStripe
 	public void deletePlan(String planCode) throws StripeException
 	{
 		logger.warn("Deleting plan: {}", planCode);
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Plan plan = Plan.retrieve(planCode);
 		plan.delete();
 	}
@@ -138,7 +149,7 @@ public class CFStripe
 	public Token getCreditCardToken(String cardholderName, String cardNum, String secCode, int expMonth, int expYear) throws StripeException
 	{
 		logger.info("Getting CC token for {} with {}/{} exp", cardholderName, expMonth, expYear);
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Map<String, Object> tokenParams = new HashMap<String, Object>();
 		Map<String, Object> cardParams = new HashMap<String, Object>();
 		cardParams.put("name", cardholderName);
@@ -182,7 +193,7 @@ public class CFStripe
 		Date today = Convert.toDateNoTime(new Date());
 		planStartDate = Convert.toDateNoTime(planStartDate);
 		
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Map<String, Object> customerParams = new HashMap<String, Object>();
 		customerParams.put("card", cardToken.getId());
 		customerParams.put("email", email);
@@ -207,7 +218,7 @@ public class CFStripe
 	public Charge orderOneTime(Token cardToken, String email, String desc, int amountInCents) throws StripeException
 	{
 		logger.info("Creating one time charge in the amount of {} cents for {}", amountInCents, email);
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		
 		logger.info("Creating customer: {}", email);
 		Map<String, Object> customerParams = new HashMap<String, Object>();
@@ -235,7 +246,7 @@ public class CFStripe
 	public Charge chargeCustomer(String custCode, String desc, int amountInCents) throws StripeException
 	{
 		logger.info("Creating one time charge in the amount of {} cents for {}: {}", amountInCents, custCode, desc);
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Customer cust = getCustomer(custCode);
 		Map<String, Object> chargeParams = new HashMap<String, Object>();
 		chargeParams.put("amount", amountInCents);
@@ -255,7 +266,7 @@ public class CFStripe
 	public Subscription updateOrderPlan(String custCode, String newPlanCode) throws StripeException
 	{
 		logger.info("Updating order plan to {} for cust {}", newPlanCode, custCode);
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Customer c = Customer.retrieve(custCode);
 		Map<String, Object> subscriptionParams = new HashMap<String, Object>();
 		subscriptionParams.put("plan", newPlanCode);
@@ -281,17 +292,26 @@ public class CFStripe
 	 * Add a credit card to an existing customer
 	 * @param cardToken
 	 * @param custCode
-	 * @return The Card object created
+	 * @param makeDefault
 	 * @throws StripeException
 	 */
-	public Card addCreditCardToCust(Token cardToken, String custCode) throws StripeException
+	public void addCreditCardToCust(Token cardToken, String custCode, boolean makeDefault) throws StripeException
 	{
 		logger.info("Adding card {} to cust {}", cardToken.getId(), custCode);
-		Stripe.apiKey = this.getApiKey();
-		Customer cu = Customer.retrieve(custCode);
+		//Stripe.apiKey = this.getApiKey();
+		Customer cu = this.getCustomer(custCode); //Customer.retrieve(custCode);
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("card", cardToken.getId());
-		return cu.createCard(params);
+		if (makeDefault == false)
+		{
+			logger.debug("Creating CC");
+			Card card = cu.createCard(params);
+			logger.info("Created CC {}", card.getId());
+		}
+		else
+		{
+			cu.update(params);
+		}
 	}
 	
 	/**
@@ -304,7 +324,7 @@ public class CFStripe
 	public boolean deleteCreditCardForCust(String cardCode, String custCode) throws StripeException
 	{
 		logger.info("Deleting CC {} for cust {}", cardCode, custCode);
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Customer cu = Customer.retrieve(custCode);
 		for(Card card : cu.getCards().getData())
 		{
@@ -328,7 +348,7 @@ public class CFStripe
 	public Subscription updateOrderCreditCard(Token cardToken, String custCode, String planCode) throws StripeException
 	{
 		logger.info("Updating order CC for plan {}, cust {} to {}", planCode, custCode, cardToken.getId());
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Customer c = Customer.retrieve(custCode);
 		Map<String, Object> subscriptionParams = new HashMap<String, Object>();
 		subscriptionParams.put("plan", planCode);
@@ -340,7 +360,7 @@ public class CFStripe
 	public Subscription cancelOrder(String custCode) throws StripeException
 	{
 		logger.info("Canceling order for {}", custCode);
-		Stripe.apiKey = this.getApiKey();
+		//Stripe.apiKey = this.getApiKey();
 		Customer cu = this.getCustomer(custCode);
 		return cu.cancelSubscription();
 	}
