@@ -106,6 +106,7 @@ public class CFStripe
 	 */
 	public Plan addPlan(String planCode, String name, int amountInCents, String interval, String currency) throws StripeException
 	{
+		logger.info("Adding plan {} named {}", planCode, name);
 		Stripe.apiKey = this.getApiKey();
 		Map<String, Object> planParams = new HashMap<String, Object>();
 		planParams.put("interval", interval);
@@ -136,6 +137,7 @@ public class CFStripe
 	 */
 	public Token getCreditCardToken(String cardholderName, String cardNum, String secCode, int expMonth, int expYear) throws StripeException
 	{
+		logger.info("Getting CC token for {} with {}/{} exp", cardholderName, expMonth, expYear);
 		Stripe.apiKey = this.getApiKey();
 		Map<String, Object> tokenParams = new HashMap<String, Object>();
 		Map<String, Object> cardParams = new HashMap<String, Object>();
@@ -252,6 +254,7 @@ public class CFStripe
 	 */
 	public Subscription updateOrderPlan(String custCode, String newPlanCode) throws StripeException
 	{
+		logger.info("Updating order plan to {} for cust {}", newPlanCode, custCode);
 		Stripe.apiKey = this.getApiKey();
 		Customer c = Customer.retrieve(custCode);
 		Map<String, Object> subscriptionParams = new HashMap<String, Object>();
@@ -269,6 +272,7 @@ public class CFStripe
 	 */
 	public Card getCustomerCard(String custCode, String cardCode) throws StripeException
 	{
+		logger.debug("Getting cust {} card {}", custCode, cardCode);
 		Customer cu = this.getCustomer(custCode);
 		return cu.getCards().retrieve(cardCode);
 	}
@@ -282,6 +286,7 @@ public class CFStripe
 	 */
 	public Card addCreditCardToCust(Token cardToken, String custCode) throws StripeException
 	{
+		logger.info("Adding card {} to cust {}", cardToken.getId(), custCode);
 		Stripe.apiKey = this.getApiKey();
 		Customer cu = Customer.retrieve(custCode);
 		Map<String, Object> params = new HashMap<String, Object>();
@@ -298,6 +303,7 @@ public class CFStripe
 	 */
 	public boolean deleteCreditCardForCust(String cardCode, String custCode) throws StripeException
 	{
+		logger.info("Deleting CC {} for cust {}", cardCode, custCode);
 		Stripe.apiKey = this.getApiKey();
 		Customer cu = Customer.retrieve(custCode);
 		for(Card card : cu.getCards().getData())
@@ -321,6 +327,7 @@ public class CFStripe
 	 */
 	public Subscription updateOrderCreditCard(Token cardToken, String custCode, String planCode) throws StripeException
 	{
+		logger.info("Updating order CC for plan {}, cust {} to {}", planCode, custCode, cardToken.getId());
 		Stripe.apiKey = this.getApiKey();
 		Customer c = Customer.retrieve(custCode);
 		Map<String, Object> subscriptionParams = new HashMap<String, Object>();
@@ -332,6 +339,7 @@ public class CFStripe
 	
 	public Subscription cancelOrder(String custCode) throws StripeException
 	{
+		logger.info("Canceling order for {}", custCode);
 		Stripe.apiKey = this.getApiKey();
 		Customer cu = this.getCustomer(custCode);
 		return cu.cancelSubscription();
@@ -339,11 +347,13 @@ public class CFStripe
 
 	public Customer getCustomer(String custCode) throws StripeException
 	{
+		logger.debug("Getting cust: {}", custCode);
 		return Customer.retrieve(custCode);
 	}
 	
 	public List<Card> getCustomerCards(String custCode) throws StripeException
 	{
+		logger.debug("Getting cust cards: {}", custCode);
 		Customer inv = Customer.retrieve(custCode);
 		Map<String, Object> cardParams = new HashMap<String, Object>();
 		cardParams.put("count", 10);
