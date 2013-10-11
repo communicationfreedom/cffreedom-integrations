@@ -302,14 +302,13 @@ public class CFStripe
 		Customer cu = this.getCustomer(custCode); //Customer.retrieve(custCode);
 		Map<String, Object> params = new HashMap<String, Object>();
 		params.put("card", cardToken.getId());
-		if (makeDefault == false)
+		logger.debug("Creating CC");
+		Card card = cu.createCard(params);
+		if (makeDefault == true)
 		{
-			logger.debug("Creating CC");
-			cu.createCard(params);
-		}
-		else
-		{
-			logger.debug("Creating CC and making default");
+			logger.debug("Making new CC the default");
+			params = new HashMap<String, Object>();
+			params.put("default_card", card.getId());
 			cu.update(params);
 		}
 		logger.info("Added CC to cust {}", custCode);
