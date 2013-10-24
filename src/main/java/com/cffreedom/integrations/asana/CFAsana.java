@@ -3,6 +3,7 @@ package com.cffreedom.integrations.asana;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.Iterator;
 
 import org.apache.commons.codec.binary.Base64;
@@ -51,9 +52,7 @@ public class CFAsana
 		this.apiKey = apiKey;
 		String encodedLogin = new String(Base64.encodeBase64(this.apiKey.getBytes()));
 		this.authVal = "Basic " + encodedLogin;
-		String response = HttpUtils.httpGetWithReqProp(URL_AUTH, "Authorization", this.getAuthVal());
-
-		JSONObject jsonObj = JsonUtils.getJsonObject(response);
+		JSONObject jsonObj = processUrl(URL_AUTH);
 		this.userData = JsonUtils.getJsonObject(jsonObj, "data");
 	}
 
@@ -84,8 +83,7 @@ public class CFAsana
 	{
 		ArrayList<Container> workspaces = new ArrayList<Container>();
 
-		JSONArray wspaces = JsonUtils
-				.getJsonArray(this.getUserData(), "workspaces");
+		JSONArray wspaces = JsonUtils.getJsonArray(this.getUserData(), "workspaces");
 
 		Iterator<JSONObject> iterator = wspaces.iterator();
 		while (iterator.hasNext())
@@ -108,11 +106,8 @@ public class CFAsana
 
 		try
 		{
-			String url = "https://app.asana.com/api/1.0/workspaces/" + workspace
-					.getCode() + "/projects";
-			String response = HttpUtils
-					.httpGetWithReqProp(url, "Authorization", this.getAuthVal());
-			JSONObject jsonObj = JsonUtils.getJsonObject(response);
+			String url = "https://app.asana.com/api/1.0/workspaces/" + workspace.getCode() + "/projects";
+			JSONObject jsonObj = processUrl(url);
 			JSONArray tasksArray = JsonUtils.getJsonArray(jsonObj, "data");
 
 			Iterator<JSONObject> iterator = tasksArray.iterator();
@@ -147,8 +142,7 @@ public class CFAsana
 		try
 		{
 			String url = "https://app.asana.com/api/1.0/projects/" + project.getCode() + "/tasks?opt_fields=name,notes,due_on";
-			String response = HttpUtils.httpGetWithReqProp(url, "Authorization", this.getAuthVal());
-			JSONObject jsonObj = JsonUtils.getJsonObject(response);
+			JSONObject jsonObj = processUrl(url);
 			JSONArray tasksArray = JsonUtils.getJsonArray(jsonObj, "data");
 
 			Iterator<JSONObject> iterator = tasksArray.iterator();
@@ -205,11 +199,8 @@ public class CFAsana
 
 		try
 		{
-			String url = "https://app.asana.com/api/1.0/tasks/" + task
-					.getCode() + "/tags";
-			String response = HttpUtils
-					.httpGetWithReqProp(url, "Authorization", this.getAuthVal());
-			JSONObject jsonObj = JsonUtils.getJsonObject(response);
+			String url = "https://app.asana.com/api/1.0/tasks/" + task.getCode() + "/tags";
+			JSONObject jsonObj = processUrl(url);
 			JSONArray tasksArray = JsonUtils.getJsonArray(jsonObj, "data");
 
 			Iterator<JSONObject> iterator = tasksArray.iterator();
@@ -232,5 +223,13 @@ public class CFAsana
 		}
 
 		return tags;
+	}
+	
+	private JSONObject processUrl(String url) throws IOException, ParseException
+	{
+		HashMap<String, String> reqProps = new HashMap<String, String>();
+		reqProps.put("Authorization", this.getAuthVal());
+		String response = HttpUtils.httpGetWithReqProp(url, reqProps);
+		return JsonUtils.getJsonObject(response);
 	}
 }
