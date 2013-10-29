@@ -51,7 +51,7 @@ import com.twilio.sdk.verbs.Say;
  * 
  * Changes:
  * 2013-09-30 	markjacobsen.net 	Added sendMms(), twimlRejectCall(), and twimlSayAndHangUp()
- * 2013-10-28 	MarkJacobsen.net	Added getAvailableTollFreeNumbers()
+ * 2013-10-28 	MarkJacobsen.net	Added getAvailableTollFreeNumbers(), getAvailableLocalNumbers(), and getAvailableNumbers()
  */
 public class CFTwilio
 {
@@ -82,6 +82,16 @@ public class CFTwilio
 	
 	public ArrayList<PhoneNumber> getAvailableTollFreeNumbers(String contains)
 	{
+		return this.getAvailableNumbers("TollFree", "US", contains);
+	}
+	
+	public ArrayList<PhoneNumber> getAvailableLocalNumbers(String contains)
+	{
+		return this.getAvailableNumbers("Local", "US", contains);
+	}
+	
+	public ArrayList<PhoneNumber> getAvailableNumbers(String type, String isoCountry, String contains)
+	{
 		ArrayList<PhoneNumber> results = new ArrayList<PhoneNumber>();
 		HashMap<String, String> params = new HashMap<String, String>();
 		
@@ -91,7 +101,7 @@ public class CFTwilio
 			params.put("Contains", contains);
 		}
 		
-		AvailablePhoneNumberList numbers = this.getAccount().getAvailablePhoneNumbers(params, "US", "TollFree");
+		AvailablePhoneNumberList numbers = this.getAccount().getAvailablePhoneNumbers(params, isoCountry, type);
 		
 		for (AvailablePhoneNumber num : numbers.getPageData())
 		{
