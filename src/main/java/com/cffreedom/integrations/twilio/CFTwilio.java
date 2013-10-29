@@ -10,6 +10,7 @@ import org.apache.http.message.BasicNameValuePair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.cffreedom.beans.PhoneNumber;
 import com.cffreedom.exceptions.InfrastructureException;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
@@ -17,9 +18,11 @@ import com.twilio.sdk.resource.factory.CallFactory;
 import com.twilio.sdk.resource.factory.MessageFactory;
 import com.twilio.sdk.resource.factory.SmsFactory;
 import com.twilio.sdk.resource.instance.Account;
+import com.twilio.sdk.resource.instance.AvailablePhoneNumber;
 import com.twilio.sdk.resource.instance.Call;
 import com.twilio.sdk.resource.instance.Message;
 import com.twilio.sdk.resource.instance.Sms;
+import com.twilio.sdk.resource.list.AvailablePhoneNumberList;
 import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
 import com.twilio.sdk.verbs.Hangup;
@@ -48,6 +51,7 @@ import com.twilio.sdk.verbs.Say;
  * 
  * Changes:
  * 2013-09-30 	markjacobsen.net 	Added sendMms(), twimlRejectCall(), and twimlSayAndHangUp()
+ * 2013-10-28 	MarkJacobsen.net	Added getAvailableTollFreeNumbers()
  */
 public class CFTwilio
 {
@@ -74,6 +78,31 @@ public class CFTwilio
 	private Account getAccount()
 	{
 		return this.account;
+	}
+	
+	public ArrayList<PhoneNumber> getAvailableTollFreeNumbers(String contains)
+	{
+		ArrayList<PhoneNumber> results = new ArrayList<PhoneNumber>();
+		HashMap<String, String> params = new HashMap<String, String>();
+		
+		if ((contains != null) && (contains.length() > 0))
+		{
+			logger.debug("Searching for numbers containing: {}", contains);
+			params.put("Contains", contains);
+		}
+		
+		AvailablePhoneNumberList numbers = this.getAccount().getAvailablePhoneNumbers(params, "US", "TollFree");
+		
+		for (AvailablePhoneNumber num : numbers.getPageData())
+		{
+			PhoneNumber number = new PhoneNumber();
+			number.setDisplay(num.getFriendlyName());
+			number.setCode(num.getPhoneNumber());
+			number.setIsoCountry(num.getIsoCountry());
+			results.add(number);
+		}
+		
+		return results;
 	}
 
 	/**
