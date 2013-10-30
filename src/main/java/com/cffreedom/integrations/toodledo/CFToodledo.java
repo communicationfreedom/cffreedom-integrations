@@ -1,6 +1,5 @@
 package com.cffreedom.integrations.toodledo;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Iterator;
@@ -14,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
 import com.cffreedom.beans.Task;
+import com.cffreedom.exceptions.NetworkException;
 import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
@@ -169,7 +169,7 @@ public class CFToodledo
 		return code;
 	}
 
-	public ArrayList<Task> getTasks() throws IOException, ParseException
+	public ArrayList<Task> getTasks() throws NetworkException, ParseException
 	{
 		final String FIELDS = "meta,folder,context,tag,startdate,starttime,duedate,duetime,note";
 		ArrayList<Task> tasks = new ArrayList<Task>();
@@ -250,7 +250,7 @@ public class CFToodledo
 		return tasks;
 	}
 
-	public ArrayList<Task> getTasks(Container folder) throws IOException, ParseException
+	public ArrayList<Task> getTasks(Container folder) throws NetworkException, ParseException
 	{
 		ArrayList<Task> tasks = new ArrayList<Task>();
 
@@ -266,7 +266,7 @@ public class CFToodledo
 		return tasks;
 	}
 	
-	public boolean insertTask(Task task) throws IOException, ParseException
+	public boolean insertTask(Task task) throws NetworkException, ParseException
 	{
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/add.php?key="+this.getKey()+";tasks=[{\"title\"%3A\""+task.getTitle()+"\"%2C\"folder\"%3A\""+task.getFolder().getCode()+"\"}];fields=folder";
 		String response = HttpUtils.httpGet(url).getDetail();

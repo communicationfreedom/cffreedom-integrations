@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
 import com.cffreedom.beans.Task;
+import com.cffreedom.exceptions.NetworkException;
 import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
@@ -47,7 +48,7 @@ public class CFAsana
 	private String authVal;
 	private JSONObject userData;
 
-	public CFAsana(String apiKey) throws IOException, ParseException
+	public CFAsana(String apiKey) throws NetworkException, ParseException
 	{
 		this.apiKey = apiKey;
 		String encodedLogin = new String(Base64.encodeBase64(this.apiKey.getBytes()));
@@ -225,7 +226,7 @@ public class CFAsana
 		return tags;
 	}
 	
-	private JSONObject processUrl(String url) throws IOException, ParseException
+	private JSONObject processUrl(String url) throws NetworkException, ParseException
 	{
 		HashMap<String, String> reqProps = new HashMap<String, String>();
 		reqProps.put("Authorization", this.getAuthVal());

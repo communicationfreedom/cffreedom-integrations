@@ -1,6 +1,5 @@
 package com.cffreedom.integrations.harvest;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
@@ -10,6 +9,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import com.cffreedom.beans.Container;
+import com.cffreedom.exceptions.NetworkException;
 import com.cffreedom.utils.Utils;
 import com.cffreedom.utils.XmlUtils;
 import com.cffreedom.utils.net.HttpUtils;
@@ -145,7 +145,7 @@ public class CFHarvest
 		return ret;
 	}
 	
-	private String makeRequest(String url) throws IOException
+	private String makeRequest(String url) throws NetworkException
 	{
 		String fullurl = "https://" + this.getSubdomain() + ".harvestapp.com" + url;
 		HashMap<String, String> reqProps = new HashMap<String, String>();
