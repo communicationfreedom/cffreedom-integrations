@@ -29,7 +29,7 @@ public class CFStripeWebHook
 	 */
 	public static String getId(JSONObject webHook)
 	{
-		return JsonUtils.getJsonObjectStringVal(webHook, "id");
+		return JsonUtils.getString(webHook, "id");
 	}
 	
 	/**
@@ -39,7 +39,7 @@ public class CFStripeWebHook
 	 */
 	public static String getType(JSONObject webHook)
 	{
-		return JsonUtils.getJsonObjectStringVal(webHook, "type");
+		return JsonUtils.getString(webHook, "type");
 	}
 
 	/**
@@ -49,7 +49,7 @@ public class CFStripeWebHook
 	 */
 	public static boolean getIsLive(JSONObject webHook)
 	{
-		return JsonUtils.getJsonObjectBooleanVal(webHook, "livemode");
+		return JsonUtils.getBoolean(webHook, "livemode");
 	}
 	
 	/**
@@ -59,7 +59,7 @@ public class CFStripeWebHook
 	 */
 	public static Date getCreated(JSONObject webHook)
 	{
-		return Convert.toDate(JsonUtils.getJsonObjectLongVal(webHook, "created")*1000);
+		return Convert.toDate(JsonUtils.getLong(webHook, "created")*1000);
 	}
 	
 	public static Payment getPayment(JSONObject webHook)
@@ -68,15 +68,15 @@ public class CFStripeWebHook
 		
 		JSONObject data = JsonUtils.getJsonObject(webHook, "data");
 		JSONObject pmt = JsonUtils.getJsonObject(data, "object");
-		payment.setPaymentDate(Convert.toDate(JsonUtils.getJsonObjectLongVal(pmt, "created")*1000));
-		payment.setPaymentCode(JsonUtils.getJsonObjectStringVal(pmt, "id"));
-		payment.setCustomerCode(JsonUtils.getJsonObjectStringVal(pmt, "customer"));
-		payment.setMemo(JsonUtils.getJsonObjectStringVal(pmt, "description"));
-		payment.setCurrency(JsonUtils.getJsonObjectStringVal(pmt, "currency"));
-		payment.setGross(Convert.toBigDecimalFromCents(JsonUtils.getJsonObjectLongVal(pmt, "amount")));
-		payment.setFees(Convert.toBigDecimalFromCents(JsonUtils.getJsonObjectLongVal(pmt, "fee")));
-		payment.setPaid(JsonUtils.getJsonObjectBooleanVal(pmt, "paid"));
-		payment.setRefunded(JsonUtils.getJsonObjectBooleanVal(pmt, "refunded"));
+		payment.setPaymentDate(Convert.toDate(JsonUtils.getLong(pmt, "created")*1000));
+		payment.setPaymentCode(JsonUtils.getString(pmt, "id"));
+		payment.setCustomerCode(JsonUtils.getString(pmt, "customer"));
+		payment.setMemo(JsonUtils.getString(pmt, "description"));
+		payment.setCurrency(JsonUtils.getString(pmt, "currency"));
+		payment.setGross(Convert.toBigDecimalFromCents(JsonUtils.getLong(pmt, "amount")));
+		payment.setFees(Convert.toBigDecimalFromCents(JsonUtils.getLong(pmt, "fee")));
+		payment.setPaid(JsonUtils.getBoolean(pmt, "paid"));
+		payment.setRefunded(JsonUtils.getBoolean(pmt, "refunded"));
 		
 		return payment;
 	}

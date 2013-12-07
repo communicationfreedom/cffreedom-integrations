@@ -108,12 +108,12 @@ public class CFToodledo
 			String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
 			String response = HttpUtils.httpGet(url).getDetail();
 			JSONObject jsonObj = JsonUtils.getJsonObject(response);
-			String userId = JsonUtils.getJsonObjectStringVal(jsonObj, "userid");
+			String userId = JsonUtils.getString(jsonObj, "userid");
 			String encodedLogin = Convert.toMd5(userId + this.apiToken);
 			url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
 			response = HttpUtils.httpGet(url).getDetail();
 			jsonObj = JsonUtils.getJsonObject(response);
-			this.token = JsonUtils.getJsonObjectStringVal(jsonObj, "token");
+			this.token = JsonUtils.getString(jsonObj, "token");
 			
 			try
 			{
@@ -183,27 +183,27 @@ public class CFToodledo
 		{
 			JSONObject task = iterator.next();
 			ArrayList<Container> tags = new ArrayList<Container>();
-			String code = JsonUtils.getJsonObjectStringVal(task, "id");
-			String title = JsonUtils.getJsonObjectStringVal(task, "title");
-			String meta = JsonUtils.getJsonObjectStringVal(task, "meta");
-			String note = JsonUtils.getJsonObjectStringVal(task, "note");
-			String folderName = JsonUtils.getJsonObjectStringVal(task, "folder");
-			String tagList = JsonUtils.getJsonObjectStringVal(task, "tag");
+			String code = JsonUtils.getString(task, "id");
+			String title = JsonUtils.getString(task, "title");
+			String meta = JsonUtils.getString(task, "meta");
+			String note = JsonUtils.getString(task, "note");
+			String folderName = JsonUtils.getString(task, "folder");
+			String tagList = JsonUtils.getString(task, "tag");
 			
 			Date startDate = null;
 			Date startTime = null;
 			Date dueDate = null;
 			Date dueTime = null;
-			Long startL = JsonUtils.getJsonObjectLongVal(task, "startdate");
-			String startTimeS = JsonUtils.getJsonObjectStringVal(task, "starttime");
-			Long dueL = JsonUtils.getJsonObjectLongVal(task, "duedate");
+			Long startL = JsonUtils.getLong(task, "startdate");
+			String startTimeS = JsonUtils.getString(task, "starttime");
+			Long dueL = JsonUtils.getLong(task, "duedate");
 			
 			try{
-				Long dueTimeL = JsonUtils.getJsonObjectLongVal(task, "duetime");
+				Long dueTimeL = JsonUtils.getLong(task, "duetime");
 				if (dueTimeL != null) { dueTime = DateTimeUtils.gmtToLocal(Convert.toDate(dueTimeL.longValue()*1000)); Utils.output(dueTime + "<-- converted"); }
 			}catch (Exception e){
 				// If it's not a long it's going to be a string w/ a value of "0" for no time
-				String dueTimeS = JsonUtils.getJsonObjectStringVal(task, "duetime");
+				String dueTimeS = JsonUtils.getString(task, "duetime");
 				if (dueTimeS != null) 
 				{ 
 					if (dueTimeS.equalsIgnoreCase("0") == true) { dueTime = Convert.toDate("1900-01-01 00:00:00", DateTimeUtils.MASK_FILE_TIMESTAMP); }
@@ -273,7 +273,7 @@ public class CFToodledo
 		logger.debug("{}", response);
 		JSONArray tasksArray = JsonUtils.getJsonArray(response);
 		JSONObject newTask = (JSONObject)(tasksArray.get(0));
-		Long id = JsonUtils.getJsonObjectLongVal(newTask, "id");
+		Long id = JsonUtils.getLong(newTask, "id");
 		logger.debug("New task id: {}", id);
 		return false;
 	}
