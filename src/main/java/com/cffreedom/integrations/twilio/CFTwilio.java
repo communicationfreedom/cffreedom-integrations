@@ -90,6 +90,13 @@ public class CFTwilio
 		return this.getAvailableNumbers("Local", "US", contains);
 	}
 	
+	/**
+	 * Return potential numbers for the criteria passed in
+	 * @param type One of "Local" or "TollFree"
+	 * @param isoCountry Option like "US", "GB", etc
+	 * @param contains Send null or ZLS for random numbers. No need to use wildcards
+	 * @return
+	 */
 	public ArrayList<PhoneNumber> getAvailableNumbers(String type, String isoCountry, String contains)
 	{
 		ArrayList<PhoneNumber> results = new ArrayList<PhoneNumber>();
