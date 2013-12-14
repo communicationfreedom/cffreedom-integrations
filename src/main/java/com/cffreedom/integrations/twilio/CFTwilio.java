@@ -12,14 +12,18 @@ import org.slf4j.LoggerFactory;
 
 import com.cffreedom.beans.PhoneNumber;
 import com.cffreedom.exceptions.InfrastructureException;
+import com.cffreedom.utils.Convert;
+import com.cffreedom.utils.FormatUtils;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
 import com.twilio.sdk.resource.factory.CallFactory;
+import com.twilio.sdk.resource.factory.IncomingPhoneNumberFactory;
 import com.twilio.sdk.resource.factory.MessageFactory;
 import com.twilio.sdk.resource.factory.SmsFactory;
 import com.twilio.sdk.resource.instance.Account;
 import com.twilio.sdk.resource.instance.AvailablePhoneNumber;
 import com.twilio.sdk.resource.instance.Call;
+import com.twilio.sdk.resource.instance.IncomingPhoneNumber;
 import com.twilio.sdk.resource.instance.Message;
 import com.twilio.sdk.resource.instance.Sms;
 import com.twilio.sdk.resource.list.AvailablePhoneNumberList;
@@ -52,6 +56,7 @@ import com.twilio.sdk.verbs.Say;
  * Changes:
  * 2013-09-30 	markjacobsen.net 	Added sendMms(), twimlRejectCall(), and twimlSayAndHangUp()
  * 2013-10-28 	MarkJacobsen.net	Added getAvailableTollFreeNumbers(), getAvailableLocalNumbers(), and getAvailableNumbers()
+ * 2013-12-13 	MarkJacobsen.net 	Added addPhoneNumber()
  */
 public class CFTwilio
 {
@@ -302,6 +307,40 @@ public class CFTwilio
 		catch (TwiMLException e)
 		{
 			throw new InfrastructureException("Error in twimlDial: " + e.getMessage(), e);
+		}
+	}
+	
+	/**
+	 * Add/reserve a phone number
+	 * @param number
+	 * @param name
+	 * @param voiceUrl
+	 * @param smsUrl
+	 * @param cnamLookup
+	 * @return SID for the number phone number
+	 * @throws InfrastructureException
+	 */
+	public String addPhoneNumber(String number, String name, String voiceUrl, String smsUrl, boolean cnamLookup) throws InfrastructureException
+	{
+		try
+		{
+			List<NameValuePair> params = new ArrayList<NameValuePair>();
+		    params.add(new BasicNameValuePair("FriendlyName", name));
+		    params.add(new BasicNameValuePair("PhoneNumber", FormatUtils.formatPhoneNumber(FormatUtils.PHONE_INT, number)));
+		    params.add(new BasicNameValuePair("VoiceUrl", voiceUrl));
+		    params.add(new BasicNameValuePair("VoiceMethod", "POST"));
+		    params.add(new BasicNameValuePair("SmsUrl", smsUrl));
+		    params.add(new BasicNameValuePair("SmsMethod", "POST"));
+		    params.add(new BasicNameValuePair("VoiceCallerIdLookup", Convert.toString(cnamLookup)));
+		    
+			IncomingPhoneNumberFactory numberFactory = this.account.getIncomingPhoneNumberFactory();
+			IncomingPhoneNumber pnumber = numberFactory.create(params);
+			return pnumber.getSid();
+		}
+		catch (TwilioRestException e)
+		{
+			logger.error(e.getMessage());
+			throw new InfrastructureException("Error adding phone number: " + e.getMessage(), e);
 		}
 	}
 
