@@ -14,6 +14,7 @@ import com.cffreedom.beans.PhoneNumber;
 import com.cffreedom.exceptions.InfrastructureException;
 import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.FormatUtils;
+import com.cffreedom.utils.Utils;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
 import com.twilio.sdk.resource.factory.CallFactory;
@@ -30,9 +31,11 @@ import com.twilio.sdk.resource.list.AvailablePhoneNumberList;
 import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
 import com.twilio.sdk.verbs.Hangup;
+import com.twilio.sdk.verbs.Play;
 import com.twilio.sdk.verbs.Reject;
 import com.twilio.sdk.verbs.TwiMLException;
 import com.twilio.sdk.verbs.TwiMLResponse;
+import com.twilio.sdk.verbs.Record;
 import com.twilio.sdk.verbs.Say;
 
 /**
@@ -194,6 +197,37 @@ public class CFTwilio
 			throw new InfrastructureException("Error: " + e.getMessage(), e);
 		}
 	}
+	
+	/**
+	 * Send an SMS to the caller
+	 * @param msg
+	 * @return TWIML XML
+	 * @throws InfrastructureException
+	 */
+	public String twimlSms(String msg) throws InfrastructureException
+	{		
+		try
+		{
+			TwiMLResponse resp = new TwiMLResponse();
+			com.twilio.sdk.verbs.Sms sms = new com.twilio.sdk.verbs.Sms(msg);
+			resp.append(sms);
+			return getFullXmlTwiML(resp.toXML());
+		}
+		catch (TwiMLException e)
+		{
+			throw new InfrastructureException("Error: " + e.getMessage(), e);
+		}
+	}
+	
+	/**
+	 * Return an empty response
+	 * @return TWIML XML
+	 */
+	public String twimlEmptyResponse()
+	{		
+		TwiMLResponse resp = new TwiMLResponse();
+		return getFullXmlTwiML(resp.toXML());
+	}
 
 	/**
 	 * Send a SMS message
@@ -290,6 +324,52 @@ public class CFTwilio
 		catch (TwiMLException e)
 		{
 			throw new InfrastructureException("Error in twimlGetInput: " + e.getMessage(), e);
+		}
+	}
+	
+	public String twimlForwardWithVoicemail(String number, String msgMp3Url, String voicemailHandlerUrl, int secordsForForwarding, int secordsToRecord) throws InfrastructureException
+	{		
+		try
+		{
+			if (secordsForForwarding <= 0) { secordsForForwarding = 25; }
+			if (secordsToRecord <= 0) { secordsToRecord = 3600; }
+			
+			TwiMLResponse resp = new TwiMLResponse();
+			
+			if (Utils.hasLength(number) == true)
+			{
+				number = FormatUtils.formatPhoneNumber(FormatUtils.PHONE_INT, number);
+				logger.debug("Forwarding to: {}", number);
+				Dial dial = new Dial(number);
+				dial.setTimeout(secordsForForwarding);
+				dial.setTimeLimit(secordsToRecord);
+				resp.append(dial);
+			}
+			
+			if (Utils.hasLength(msgMp3Url) == true)
+			{
+				logger.debug("Play MP3 msg: {}", msgMp3Url);
+				Play play = new Play(msgMp3Url);
+				resp.append(play);
+			}
+			else
+			{
+				Say say = new Say("Please leave a message.");
+				resp.append(say);
+			}
+			
+			logger.debug("Adding voicemail recording and handler");
+			Record record = new Record();
+			record.setAction(voicemailHandlerUrl);
+			//record.setPlayBeep(true);  // this is throwing an error for some reason
+			record.setTranscribe(false);
+			resp.append(record);
+			
+			return getFullXmlTwiML(resp.toXML());
+		}
+		catch (TwiMLException e)
+		{
+			throw new InfrastructureException("Error in twimlForwardWithVoicemail: " + e.getMessage(), e);
 		}
 	}
 
