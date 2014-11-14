@@ -327,11 +327,56 @@ public class CFTwilio
 		}
 	}
 	
-	public String twimlForwardWithVoicemail(String number, String msgMp3Url, String voicemailHandlerUrl, int secordsForForwarding, int secordsToRecord) throws InfrastructureException
+	/**
+	 * Prompt the user to make a recording and press any key
+	 * @param processUrl
+	 * @param prompt
+	 * @return
+	 * @throws InfrastructureException
+	 */
+	public String twimlRecord(String processUrl, String prompt) throws InfrastructureException
 	{		
 		try
 		{
-			if (secordsForForwarding <= 0) { secordsForForwarding = 25; }
+			TwiMLResponse resp = new TwiMLResponse();
+			
+			if (Utils.hasLength(prompt) == false){
+				prompt = "Please make your recording and press any key when finished.";
+			}
+			Say say = new Say(prompt);
+			resp.append(say);
+			
+			Record record = new Record();
+			record.setAction(processUrl);
+			record.setPlayBeep(true);
+			record.setTranscribe(false);
+			record.setFinishOnKey("1234567890*#");
+			resp.append(record);
+			
+			return getFullXmlTwiML(resp.toXML());
+		}
+		catch (TwiMLException e)
+		{
+			throw new InfrastructureException("Error in twimlRecord: " + e.getMessage(), e);
+		}
+	}
+	
+	/**
+	 * 
+	 * @param number Phone number to forward to
+	 * @param msgMp3Url
+	 * @param tts If there is no msgMp3Url, this text will be read to the caller prior to them leaving a voicemail
+	 * @param voicemailHandlerUrl
+	 * @param secordsForForwarding Defaults to 15 if <= 0
+	 * @param secordsToRecord Defaults to 300 if <= 0
+	 * @return
+	 * @throws InfrastructureException
+	 */
+	public String twimlForwardWithVoicemail(String number, String msgMp3Url, String tts, String voicemailHandlerUrl, int secordsForForwarding, int secordsToRecord) throws InfrastructureException
+	{		
+		try
+		{
+			if (secordsForForwarding <= 0) { secordsForForwarding = 15; }
 			if (secordsToRecord <= 0) { secordsToRecord = 3600; }
 			
 			TwiMLResponse resp = new TwiMLResponse();
@@ -354,7 +399,8 @@ public class CFTwilio
 			}
 			else
 			{
-				Say say = new Say("Please leave a message.");
+				if (Utils.hasLength(tts) == false) { tts = "Please leave a message."; }
+				Say say = new Say(tts);
 				resp.append(say);
 			}
 			
