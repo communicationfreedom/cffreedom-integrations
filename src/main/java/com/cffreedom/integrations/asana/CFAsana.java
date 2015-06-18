@@ -157,7 +157,7 @@ public class CFAsana
 				String meta = "";
 				String note = JsonUtils.getString(task, "notes");
 				String due = JsonUtils.getString(task, "due_on");		
-				Date dueDate = Convert.toDate(due, DateTimeUtils.MASK_FILE_DATESTAMP);
+				Date dueDate = Convert.toDate(due, DateTimeUtils.DATE_FILE);
 
 				if (code != null)
 				{

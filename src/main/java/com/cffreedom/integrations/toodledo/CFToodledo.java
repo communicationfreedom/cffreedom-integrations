@@ -87,7 +87,7 @@ public class CFToodledo
 				String cachedVal = tokenCache.getEntryAsString(this.getUserEmail());
 				logger.debug("Cached token exists for: {}, value: {}", this.getUserEmail(), cachedVal);
 				String[] value = cachedVal.split("\\|");
-				if (Convert.toDate(value[1], DateTimeUtils.MASK_FULL_TIMESTAMP).after(DateTimeUtils.dateAdd(new Date(), -2, DateTimeUtils.DATE_PART_HOUR)) == true)
+				if (Convert.toDate(value[1], DateTimeUtils.DATE_TIMESTAMP).after(DateTimeUtils.dateAdd(new Date(), -2, DateTimeUtils.DATE_PART_HOUR)) == true)
 				{
 					logger.debug("Using cached token");
 					this.token = value[0];
@@ -117,7 +117,7 @@ public class CFToodledo
 			
 			try
 			{
-				if (tokenCache.addEntry(this.getUserEmail(), this.token + "|" + Convert.toString(new Date(), DateTimeUtils.MASK_FULL_TIMESTAMP)) == true)
+				if (tokenCache.addEntry(this.getUserEmail(), this.token + "|" + Convert.toString(new Date(), DateTimeUtils.DATE_TIMESTAMP)) == true)
 				{
 					logger.debug("Stored token in cache file");
 				}
@@ -206,7 +206,7 @@ public class CFToodledo
 				String dueTimeS = JsonUtils.getString(task, "duetime");
 				if (dueTimeS != null) 
 				{ 
-					if (dueTimeS.equalsIgnoreCase("0") == true) { dueTime = Convert.toDate("1900-01-01 00:00:00", DateTimeUtils.MASK_FILE_TIMESTAMP); }
+					if (dueTimeS.equalsIgnoreCase("0") == true) { dueTime = Convert.toDate("1900-01-01 00:00:00", DateTimeUtils.DATE_TIMESTAMP); }
 					else { dueTime = Convert.toDate(Convert.toLong(dueTimeS)*1000); }
 				}
 			}
