@@ -1,5 +1,6 @@
 package com.cffreedom.integrations.gmaps;
 
+import com.cffreedom.beans.Address;
 import com.cffreedom.exceptions.InfrastructureException;
 import com.cffreedom.utils.Cacher;
 import com.cffreedom.utils.Utils;
@@ -40,11 +41,16 @@ public class CFGMaps
 		this.context = new GeoApiContext().setApiKey(apiKey);
 	}
 	
-	private GeocodingResult[] getGeocodingResults(String address, String city, String state, int zip) throws InfrastructureException
+	private Address getAddress(String address, String city, String state, int zip)
+	{
+		return new Address(address, city, state, zip+"");
+	}
+	
+	private GeocodingResult[] getGeocodingResults(Address address) throws InfrastructureException
 	{
 		try
 		{
-			String key = address + " " + city + ", " + state + " " + zip;
+			String key = address.toString();
 			if (this.cacher.containsKey(key) == false) {
 				this.cacher.put(key, GeocodingApi.geocode(this.context, key).await());
 			}
@@ -69,21 +75,58 @@ public class CFGMaps
 		}
 	}
 	
-	public String getAddress(double latitude, double longitude) throws InfrastructureException
+	/**
+	 * Get an address for a given lat/lng
+	 * @param latitude
+	 * @param longitude
+	 * @return
+	 * @throws InfrastructureException
+	 */
+	public String getFormattedAddress(double latitude, double longitude) throws InfrastructureException
 	{
 		GeocodingResult[] results = getGeocodingResults(latitude, longitude);
 		return results[0].formattedAddress;
 	}
 	
+	/**
+	 * Get the latitude for a given address
+	 * @param address
+	 * @param city
+	 * @param state
+	 * @param zip
+	 * @return
+	 * @throws InfrastructureException
+	 */
 	public double getLatitude(String address, String city, String state, int zip) throws InfrastructureException
 	{
-		GeocodingResult[] results = getGeocodingResults(address, city, state, zip);
+		Address addr = getAddress(address, city, state, zip);
+		return getLatitude(addr);
+	}
+	
+	public double getLatitude(Address address) throws InfrastructureException
+	{
+		GeocodingResult[] results = getGeocodingResults(address);
 		return results[0].geometry.location.lat;
 	}
 	
+	/**
+	 * Get the longitude for a given address
+	 * @param address
+	 * @param city
+	 * @param state
+	 * @param zip
+	 * @return
+	 * @throws InfrastructureException
+	 */
 	public double getLongitude(String address, String city, String state, int zip) throws InfrastructureException
 	{
-		GeocodingResult[] results =  getGeocodingResults(address, city, state, zip);
+		Address addr = getAddress(address, city, state, zip);
+		return getLongitude(addr);
+	}
+	
+	public double getLongitude(Address address) throws InfrastructureException
+	{
+		GeocodingResult[] results =  getGeocodingResults(address);
 		return results[0].geometry.location.lng;
 	}
 	
