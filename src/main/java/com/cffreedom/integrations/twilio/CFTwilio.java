@@ -13,7 +13,7 @@ import org.slf4j.LoggerFactory;
 import com.cffreedom.beans.PhoneNumber;
 import com.cffreedom.exceptions.InfrastructureException;
 import com.cffreedom.utils.Convert;
-import com.cffreedom.utils.FormatUtils;
+import com.cffreedom.utils.Format;
 import com.cffreedom.utils.Utils;
 import com.twilio.sdk.TwilioRestClient;
 import com.twilio.sdk.TwilioRestException;
@@ -291,30 +291,32 @@ public class CFTwilio
 	}
 
 	/**
-	 * 
-	 * @param prompt What to say to the caller
-	 * @param digits Number of digits we're expecting the caller to enter
+	 * Use for menus
+	 * @param msgMp3Url URL of recording to play to to the caller
+	 * @param digits Number of digits we're expecting the caller to enter (<= 0 for arbitrary)
 	 * @param timeout How long to wait in seconds
 	 * @param afterInputUrl URL Twilio should call after getting input
 	 * @return  TWIML XML
 	 * @throws InfrastructureException
 	 */
-	public String twimlGetInput(String prompt, int digits, int timeout, String afterInputUrl) throws InfrastructureException
+	public String twimlGetInput(String msgMp3Url, int digits, int timeout, String afterInputUrl) throws InfrastructureException
 	{
-		logger.debug("{}/{}/{}/{}", prompt, digits, timeout, afterInputUrl);
+		logger.debug("{}/{}/{}/{}", msgMp3Url, digits, timeout, afterInputUrl);
 		
 		try
 		{
 			// http://www.twilio.com/docs/quickstart/java/twiml/record-caller-leave-message
 			TwiMLResponse resp = new TwiMLResponse();
-			Say say = new Say(prompt);
+			Play play = new Play(msgMp3Url);
 	
 			Gather gather = new Gather();
 			gather.setAction(afterInputUrl);
-			gather.setNumDigits(digits);
+			if (digits > 0) {
+				gather.setNumDigits(digits);
+			}
 			gather.setMethod("GET");
 			gather.setTimeout(timeout);
-			gather.append(say);
+			gather.append(play);
 	
 			resp.append(gather);
 			// If we get past the gather the request timed out
@@ -383,7 +385,7 @@ public class CFTwilio
 			
 			if (Utils.hasLength(number) == true)
 			{
-				number = FormatUtils.formatPhoneNumber(FormatUtils.PHONE_INT, number);
+				number = Format.phoneNumber(Format.PHONE_INT, number);
 				logger.debug("Forwarding to: {}", number);
 				Dial dial = new Dial(number);
 				dial.setTimeout(secordsForForwarding);
@@ -452,7 +454,7 @@ public class CFTwilio
 		{
 			List<NameValuePair> params = new ArrayList<NameValuePair>();
 		    params.add(new BasicNameValuePair("FriendlyName", name));
-		    params.add(new BasicNameValuePair("PhoneNumber", FormatUtils.formatPhoneNumber(FormatUtils.PHONE_INT, number)));
+		    params.add(new BasicNameValuePair("PhoneNumber", Format.phoneNumber(Format.PHONE_INT, number)));
 		    params.add(new BasicNameValuePair("VoiceUrl", voiceUrl));
 		    params.add(new BasicNameValuePair("VoiceMethod", "POST"));
 		    params.add(new BasicNameValuePair("SmsUrl", smsUrl));
