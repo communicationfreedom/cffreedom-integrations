@@ -364,22 +364,36 @@ public class CFTwilio
 	}
 	
 	/**
+	 * Play a recording and take voicemail
+	 * @param msgMp3Url
+	 * @param tts If there is no msgMp3Url, this text will be read to the caller prior to them leaving a voicemail
+	 * @param voicemailHandlerUrl
+	 * @param secondsForForwarding
+	 * @param secondsToRecord
+	 * @return
+	 * @throws InfrastructureException
+	 */
+	public String twimlVoicemailOnly(String msgMp3Url, String tts, String voicemailHandlerUrl, int secondsForForwarding, int secondsToRecord) throws InfrastructureException {
+		return twimlForwardWithVoicemail(null, msgMp3Url, tts, voicemailHandlerUrl, secondsForForwarding, secondsToRecord);
+	}
+	
+	/**
 	 * 
 	 * @param number Phone number to forward to
 	 * @param msgMp3Url
 	 * @param tts If there is no msgMp3Url, this text will be read to the caller prior to them leaving a voicemail
 	 * @param voicemailHandlerUrl
-	 * @param secordsForForwarding Defaults to 15 if <= 0
-	 * @param secordsToRecord Defaults to 300 if <= 0
+	 * @param secondsForForwarding Defaults to 15 if <= 0
+	 * @param secondsToRecord Defaults to 300 if <= 0
 	 * @return
 	 * @throws InfrastructureException
 	 */
-	public String twimlForwardWithVoicemail(String number, String msgMp3Url, String tts, String voicemailHandlerUrl, int secordsForForwarding, int secordsToRecord) throws InfrastructureException
+	public String twimlForwardWithVoicemail(String number, String msgMp3Url, String tts, String voicemailHandlerUrl, int secondsForForwarding, int secondsToRecord) throws InfrastructureException
 	{		
 		try
 		{
-			if (secordsForForwarding <= 0) { secordsForForwarding = 15; }
-			if (secordsToRecord <= 0) { secordsToRecord = 3600; }
+			if (secondsForForwarding <= 0) { secondsForForwarding = 15; }
+			if (secondsToRecord <= 0) { secondsToRecord = 3600; }
 			
 			TwiMLResponse resp = new TwiMLResponse();
 			
@@ -388,8 +402,8 @@ public class CFTwilio
 				number = Format.phoneNumber(Format.PHONE_INT, number);
 				logger.debug("Forwarding to: {}", number);
 				Dial dial = new Dial(number);
-				dial.setTimeout(secordsForForwarding);
-				dial.setTimeLimit(secordsToRecord);
+				dial.setTimeout(secondsForForwarding);
+				dial.setTimeLimit(secondsToRecord);
 				resp.append(dial);
 			}
 			
