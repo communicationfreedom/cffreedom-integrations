@@ -32,6 +32,7 @@ import com.twilio.sdk.verbs.Dial;
 import com.twilio.sdk.verbs.Gather;
 import com.twilio.sdk.verbs.Hangup;
 import com.twilio.sdk.verbs.Play;
+import com.twilio.sdk.verbs.Redirect;
 import com.twilio.sdk.verbs.Reject;
 import com.twilio.sdk.verbs.TwiMLException;
 import com.twilio.sdk.verbs.TwiMLResponse;
@@ -296,12 +297,13 @@ public class CFTwilio
 	 * @param digits Number of digits we're expecting the caller to enter (<= 0 for arbitrary)
 	 * @param timeout How long to wait in seconds
 	 * @param afterInputUrl URL Twilio should call after getting input
+	 * @param defaultInput If no input is entered, use this. If <= 0, and no input then hangup.
 	 * @return  TWIML XML
 	 * @throws InfrastructureException
 	 */
-	public String twimlGetInput(String msgMp3Url, int digits, int timeout, String afterInputUrl) throws InfrastructureException
+	public String twimlGetInput(String msgMp3Url, int digits, int timeout, String afterInputUrl, int defaultInput) throws InfrastructureException
 	{
-		logger.debug("{}/{}/{}/{}", msgMp3Url, digits, timeout, afterInputUrl);
+		logger.debug("{}/{}/{}/{}/{}", msgMp3Url, digits, timeout, afterInputUrl, defaultInput);
 		
 		try
 		{
@@ -319,8 +321,17 @@ public class CFTwilio
 			gather.append(play);
 	
 			resp.append(gather);
+			
 			// If we get past the gather the request timed out
-			resp.append(new Hangup());
+			if (defaultInput >= 0) {
+				String redirectUrl = afterInputUrl+"&amp;Digits="+defaultInput;
+				logger.debug("Redirecting with default input: {}", redirectUrl);
+				Redirect redirect = new Redirect(redirectUrl);
+				resp.append(redirect);
+			} else {
+				resp.append(new Hangup());
+			}
+			
 			return getFullXmlTwiML(resp.toXML());
 		}
 		catch (TwiMLException e)
