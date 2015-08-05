@@ -327,7 +327,7 @@ public class CFTwilio
 				String redirectUrl = afterInputUrl+"&amp;Digits="+defaultInput;
 				logger.trace("Redirecting with default input on timeout: {}", redirectUrl);
 				Redirect redirect = new Redirect(redirectUrl);
-				redirect.setMethod("GET");
+				redirect.setMethod("POST");
 				resp.append(redirect);
 			} else {
 				resp.append(new Hangup());
