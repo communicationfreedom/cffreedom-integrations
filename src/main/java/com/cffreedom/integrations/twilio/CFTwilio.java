@@ -445,6 +445,62 @@ public class CFTwilio
 			throw new InfrastructureException("Error in twimlForwardWithVoicemail: " + e.getMessage(), e);
 		}
 	}
+	
+	
+	public String twiml(String msgMp3Url, String msgTTS, String forwardingNumber, int forwardingSeconds, 
+						String vmMsgMp3Url, String vmMsgTTS, int vmSecondsToRecord, String vmHandlerUrl, 
+						boolean transcribe) throws InfrastructureException
+	{		
+		try
+		{
+			if (vmSecondsToRecord <= 0) { vmSecondsToRecord = 3600; }
+			
+			TwiMLResponse resp = new TwiMLResponse();
+			
+			if (Utils.hasLength(msgMp3Url) == true) {
+				logger.trace("Msg MP3: {}", msgMp3Url);
+				Play play = new Play(msgMp3Url);
+				resp.append(play);
+			} else if (Utils.hasLength(msgTTS) == true) {
+				Say say = new Say(msgTTS);
+				resp.append(say);
+			}
+			
+			if (Utils.hasLength(forwardingNumber) == true) {
+				if (forwardingSeconds <= 0) { forwardingSeconds = 15; }
+				forwardingNumber = Format.phoneNumber(Format.PHONE_INT, forwardingNumber);
+				logger.trace("Forwarding to: {}", forwardingNumber);
+				Dial dial = new Dial(forwardingNumber);
+				dial.setTimeout(forwardingSeconds);
+				dial.setTimeLimit(60*60); // max len of the call
+				resp.append(dial);
+			}
+			
+			if (Utils.hasLength(vmMsgMp3Url) == true) {
+				logger.trace("VM MP3: {}", vmMsgMp3Url);
+				Play play = new Play(vmMsgMp3Url);
+				resp.append(play);
+			} else {
+				if (Utils.hasLength(vmMsgTTS) == false) { vmMsgTTS = "Please leave a message."; }
+				Say say = new Say(vmMsgTTS);
+				resp.append(say);
+			}
+			
+			logger.trace("Adding voicemail recording and handler");
+			Record record = new Record();
+			record.setAction(vmHandlerUrl);
+			record.setMaxLength(vmSecondsToRecord);
+			//record.setPlayBeep(true);  // this is throwing an error for some reason
+			record.setTranscribe(transcribe);
+			resp.append(record);
+			
+			return getFullXmlTwiML(resp.toXML());
+		}
+		catch (TwiMLException e)
+		{
+			throw new InfrastructureException("Error in twimlForwardWithVoicemail: " + e.getMessage(), e);
+		}
+	}
 
 	public String twimlDial(String number) throws InfrastructureException
 	{
