@@ -384,8 +384,8 @@ public class CFTwilio
 	 * @return
 	 * @throws InfrastructureException
 	 */
-	public String twimlVoicemailOnly(String msgMp3Url, String tts, String voicemailHandlerUrl, int secondsForForwarding, int secondsToRecord) throws InfrastructureException {
-		return twimlForwardWithVoicemail(null, msgMp3Url, tts, voicemailHandlerUrl, secondsForForwarding, secondsToRecord);
+	public String twimlVoicemailOnly(String msgMp3Url, String tts, String voicemailHandlerUrl, int secondsToRecord) throws InfrastructureException {
+		return twimlForwardWithVoicemail(null, msgMp3Url, tts, voicemailHandlerUrl, 0, secondsToRecord);
 	}
 	
 	/**
