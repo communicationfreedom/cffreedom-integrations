@@ -446,7 +446,20 @@ public class CFTwilio
 		}
 	}
 	
-	
+	/**
+	 * Generic method for handling of just about any type of call
+	 * @param msgMp3Url Message to immediately play to the caller
+	 * @param msgTTS If no msgMp3Url and this has a value, read this text to the caller immidiately
+	 * @param forwardingNumber After any immediate message, forward to this phone number if applicable
+	 * @param forwardingSeconds If forwarding, forward for this many seconds
+	 * @param vmMsgMp3Url Play this message to the caller before taking a VM if a value is provided
+	 * @param vmMsgTTS Read this text to the caller if no Mp3 URL is provided, provides a default message of "Please leave a message"
+	 * @param vmSecondsToRecord Record up to this many seconds of voicemail
+	 * @param vmHandlerUrl URL to redirect to for handling of any voicemail message
+	 * @param transcribe true/false for if you want to transcribe
+	 * @return TWIML for the scenarios above
+	 * @throws InfrastructureException
+	 */
 	public String twiml(String msgMp3Url, String msgTTS, String forwardingNumber, int forwardingSeconds, 
 						String vmMsgMp3Url, String vmMsgTTS, int vmSecondsToRecord, String vmHandlerUrl, 
 						boolean transcribe) throws InfrastructureException
