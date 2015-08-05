@@ -325,8 +325,9 @@ public class CFTwilio
 			// If we get past the gather the request timed out
 			if (defaultInput >= 0) {
 				String redirectUrl = afterInputUrl+"&amp;Digits="+defaultInput;
-				logger.debug("Redirecting with default input: {}", redirectUrl);
+				logger.trace("Redirecting with default input on timeout: {}", redirectUrl);
 				Redirect redirect = new Redirect(redirectUrl);
+				redirect.setMethod("GET");
 				resp.append(redirect);
 			} else {
 				resp.append(new Hangup());
