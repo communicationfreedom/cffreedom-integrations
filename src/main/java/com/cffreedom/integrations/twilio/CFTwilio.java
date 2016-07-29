@@ -240,24 +240,31 @@ public class CFTwilio
 	 */
 	public String sendSms(String systemNumber, String to, String msg) throws InfrastructureException
 	{
-		logger.debug("Sending SMS: {}/{}/{}", systemNumber, to, msg);
-		
-		try
-		{
-			final SmsFactory smsFactory = this.getAccount().getSmsFactory();
-			final Map<String, String> smsParams = new HashMap<String, String>();
-			smsParams.put("To", to); // Replace with a valid phone number
-			smsParams.put("From", systemNumber); // Replace with a valid phone
-													// number in your account
-			smsParams.put("Body", msg);
-			final Sms sms = smsFactory.create(smsParams);
-			logger.debug("Sent SMS: {}", sms.getSid());
-			return sms.getSid();
+		String retMsg = "";
+		if (Utils.hasLength(msg) == false) {
+			logger.warn("No text supplied. Not sending anything {}/{}", systemNumber, to);
+			retMsg = "Nothing to send";
+		} else if (msg.length() > 160) {
+			logger.info("Upgrading message to MMS");
+			retMsg = sendMms(systemNumber, to, msg, null);
+		} else {
+			logger.debug("Sending SMS: {}/{}/{}", systemNumber, to, msg);
+			
+			try {
+				final SmsFactory smsFactory = this.getAccount().getSmsFactory();
+				final Map<String, String> smsParams = new HashMap<String, String>();
+				smsParams.put("To", to); // Replace with a valid phone number
+				smsParams.put("From", systemNumber); // Replace with a valid phone
+														// number in your account
+				smsParams.put("Body", msg);
+				final Sms sms = smsFactory.create(smsParams);
+				logger.debug("Sent SMS: {}", sms.getSid());
+				retMsg = sms.getSid();
+			} catch (TwilioRestException e) {
+				throw new InfrastructureException("Error sending SMS: " + e.getMessage(), e);
+			}
 		}
-		catch (TwilioRestException e)
-		{
-			throw new InfrastructureException("Error sending SMS: " + e.getMessage(), e);
-		}
+		return retMsg;
 	}
 
 	/**
@@ -271,24 +278,30 @@ public class CFTwilio
 	 */
 	public String sendMms(String systemNumber, String to, String msg, String imageUrl) throws InfrastructureException
 	{
-		logger.debug("Sending MMS: {}/{}/{}/{}", systemNumber, to, msg, imageUrl);
-		
-		try
-		{
-			final MessageFactory msgFactory = this.getAccount().getMessageFactory();
-			final List<NameValuePair> msgParams = new ArrayList<NameValuePair>();
-			msgParams.add(new BasicNameValuePair("To", to)); // Replace with a valid phone number
-			msgParams.add(new BasicNameValuePair("From", systemNumber)); // Replace with a valid phone number in your account
-			msgParams.add(new BasicNameValuePair("Body", msg));
-			msgParams.add(new BasicNameValuePair("MediaUrl", imageUrl));
-			final Message message = msgFactory.create(msgParams);
-			logger.debug("Sent MMS: {}", message.getSid());
-			return message.getSid();
+		String retMsg = "";
+		if (Utils.hasLength(msg) == false) {
+			logger.warn("No text supplied. Not sending anything {}/{}", systemNumber, to);
+			retMsg = "Nothing to send";
+		} else {
+			logger.debug("Sending MMS: {}/{}/{}/{}", systemNumber, to, msg, imageUrl);
+			
+			try {
+				final MessageFactory msgFactory = this.getAccount().getMessageFactory();
+				final List<NameValuePair> msgParams = new ArrayList<NameValuePair>();
+				msgParams.add(new BasicNameValuePair("To", to)); // Replace with a valid phone number
+				msgParams.add(new BasicNameValuePair("From", systemNumber)); // Replace with a valid phone number in your account
+				msgParams.add(new BasicNameValuePair("Body", msg));
+				if (Utils.hasLength(imageUrl) == true) {
+					msgParams.add(new BasicNameValuePair("MediaUrl", imageUrl));
+				}
+				final Message message = msgFactory.create(msgParams);
+				logger.debug("Sent MMS: {}", message.getSid());
+				retMsg = message.getSid();
+			} catch (TwilioRestException e) {
+				throw new InfrastructureException("Error sending MMS: " + e.getMessage(), e);
+			}
 		}
-		catch (TwilioRestException e)
-		{
-			throw new InfrastructureException("Error sending MMS: " + e.getMessage(), e);
-		}
+		return retMsg;
 	}
 
 	/**
