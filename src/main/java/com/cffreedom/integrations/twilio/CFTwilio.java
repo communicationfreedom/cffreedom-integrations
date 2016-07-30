@@ -238,15 +238,15 @@ public class CFTwilio
 	 * @return SMS SID
 	 * @throws InfrastructureException
 	 */
+	@Deprecated
 	public String sendSms(String systemNumber, String to, String msg) throws InfrastructureException
 	{
-		String retMsg = "";
+		String retMsg = "Not sent";
+		to = Format.phoneNumber(Format.PHONE_INT, to);
+		systemNumber = Format.phoneNumber(Format.PHONE_INT, systemNumber);
 		if (Utils.hasLength(msg) == false) {
 			logger.warn("No text supplied. Not sending anything {}/{}", systemNumber, to);
 			retMsg = "Nothing to send";
-		} else if (msg.length() > 160) {
-			logger.info("Upgrading message to MMS");
-			retMsg = sendMms(systemNumber, to, msg, null);
 		} else {
 			logger.debug("Sending SMS: {}/{}/{}", systemNumber, to, msg);
 			
@@ -254,14 +254,52 @@ public class CFTwilio
 				final SmsFactory smsFactory = this.getAccount().getSmsFactory();
 				final Map<String, String> smsParams = new HashMap<String, String>();
 				smsParams.put("To", to); // Replace with a valid phone number
-				smsParams.put("From", systemNumber); // Replace with a valid phone
-														// number in your account
+				smsParams.put("From", systemNumber);
 				smsParams.put("Body", msg);
 				final Sms sms = smsFactory.create(smsParams);
 				logger.debug("Sent SMS: {}", sms.getSid());
 				retMsg = sms.getSid();
 			} catch (TwilioRestException e) {
 				throw new InfrastructureException("Error sending SMS: " + e.getMessage(), e);
+			}
+		}
+		return retMsg;
+	}
+	
+	/**
+	 * Send a text message
+	 * @param systemNumber
+	 * @param to
+	 * @param msg
+	 * @imageUrl
+	 * @return MMS SID
+	 * @throws InfrastructureException
+	 */
+	public String sendTextMsg(String systemNumber, String to, String msg, String imageUrl) throws InfrastructureException
+	{
+		String retMsg = "Not sent";
+		to = Format.phoneNumber(Format.PHONE_INT, to);
+		systemNumber = Format.phoneNumber(Format.PHONE_INT, systemNumber);
+		if (Utils.hasLength(msg) == false) {
+			logger.warn("No text supplied. Not sending anything {}/{}", systemNumber, to);
+			retMsg = "Nothing to send";
+		} else {
+			logger.debug("Sending text msg: {}/{}/{}/{}", systemNumber, to, msg, imageUrl);
+			
+			try {
+				final MessageFactory msgFactory = this.getAccount().getMessageFactory();
+				final List<NameValuePair> msgParams = new ArrayList<NameValuePair>();
+				msgParams.add(new BasicNameValuePair("To", to)); // Replace with a valid phone number
+				msgParams.add(new BasicNameValuePair("From", systemNumber)); // Replace with a valid phone number in your account
+				msgParams.add(new BasicNameValuePair("Body", msg));
+				if (Utils.hasLength(imageUrl) == true) {
+					msgParams.add(new BasicNameValuePair("MediaUrl", imageUrl));
+				}
+				final Message message = msgFactory.create(msgParams);
+				logger.debug("Sent text msg: {}", message.getSid());
+				retMsg = message.getSid();
+			} catch (TwilioRestException e) {
+				throw new InfrastructureException("Error sending text msg: " + e.getMessage(), e);
 			}
 		}
 		return retMsg;
@@ -276,32 +314,10 @@ public class CFTwilio
 	 * @return MMS SID
 	 * @throws InfrastructureException
 	 */
+	@Deprecated
 	public String sendMms(String systemNumber, String to, String msg, String imageUrl) throws InfrastructureException
 	{
-		String retMsg = "";
-		if (Utils.hasLength(msg) == false) {
-			logger.warn("No text supplied. Not sending anything {}/{}", systemNumber, to);
-			retMsg = "Nothing to send";
-		} else {
-			logger.debug("Sending MMS: {}/{}/{}/{}", systemNumber, to, msg, imageUrl);
-			
-			try {
-				final MessageFactory msgFactory = this.getAccount().getMessageFactory();
-				final List<NameValuePair> msgParams = new ArrayList<NameValuePair>();
-				msgParams.add(new BasicNameValuePair("To", to)); // Replace with a valid phone number
-				msgParams.add(new BasicNameValuePair("From", systemNumber)); // Replace with a valid phone number in your account
-				msgParams.add(new BasicNameValuePair("Body", msg));
-				if (Utils.hasLength(imageUrl) == true) {
-					msgParams.add(new BasicNameValuePair("MediaUrl", imageUrl));
-				}
-				final Message message = msgFactory.create(msgParams);
-				logger.debug("Sent MMS: {}", message.getSid());
-				retMsg = message.getSid();
-			} catch (TwilioRestException e) {
-				throw new InfrastructureException("Error sending MMS: " + e.getMessage(), e);
-			}
-		}
-		return retMsg;
+		return sendTextMsg(systemNumber, to, msg, imageUrl);
 	}
 
 	/**
