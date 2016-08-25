@@ -132,7 +132,7 @@ public class CFTwilio
 	}
 
 	/**
-	 * Make an outbound call
+	 * Make/initiate an outbound call
 	 * @param systemNumber
 	 * @param to
 	 * @param afterConnectedUrl URL Twilio should call after the call is connected
@@ -323,6 +323,7 @@ public class CFTwilio
 	/**
 	 * Use for menus
 	 * @param msgMp3Url URL of recording to play to to the caller
+	 * @param tts If there is no msgMp3Url, this text will be read to the caller
 	 * @param digits Number of digits we're expecting the caller to enter (<= 0 for arbitrary)
 	 * @param timeout How long to wait in seconds
 	 * @param afterInputUrl URL Twilio should call after getting input
@@ -330,16 +331,14 @@ public class CFTwilio
 	 * @return  TWIML XML
 	 * @throws InfrastructureException
 	 */
-	public String twimlGetInput(String msgMp3Url, int digits, int timeout, String afterInputUrl, int defaultInput) throws InfrastructureException
+	public String twimlGetInput(String msgMp3Url, String tts, int digits, int timeout, String afterInputUrl, int defaultInput) throws InfrastructureException
 	{
-		logger.debug("{}/{}/{}/{}/{}", msgMp3Url, digits, timeout, afterInputUrl, defaultInput);
+		logger.debug("{}/{}/{}/{}/{}/{}", msgMp3Url, tts, digits, timeout, afterInputUrl, defaultInput);
 		
 		try
 		{
 			// http://www.twilio.com/docs/quickstart/java/twiml/record-caller-leave-message
-			TwiMLResponse resp = new TwiMLResponse();
-			Play play = new Play(msgMp3Url);
-	
+			TwiMLResponse resp = new TwiMLResponse();	
 			Gather gather = new Gather();
 			gather.setAction(afterInputUrl);
 			if (digits > 0) {
@@ -347,7 +346,13 @@ public class CFTwilio
 			}
 			gather.setMethod("GET");
 			gather.setTimeout(timeout);
-			gather.append(play);
+			if (Utils.hasLength(msgMp3Url) == true) {
+				Play play = new Play(msgMp3Url);
+				gather.append(play);
+			} else {
+				Say say = new Say(tts);
+				gather.append(say);
+			}
 	
 			resp.append(gather);
 			
@@ -545,6 +550,12 @@ public class CFTwilio
 		}
 	}
 
+	/**
+	 * Place a call from within an existing call (ex: connecting 2 calls)
+	 * @param number Number to dial
+	 * @return XML to connect to {@number}
+	 * @throws InfrastructureException
+	 */
 	public String twimlDial(String number) throws InfrastructureException
 	{
 		logger.debug("{}", number);
