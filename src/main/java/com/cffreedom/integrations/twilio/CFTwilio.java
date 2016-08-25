@@ -331,12 +331,10 @@ public class CFTwilio
 	 * @return  TWIML XML
 	 * @throws InfrastructureException
 	 */
-	public String twimlGetInput(String msgMp3Url, String tts, int digits, int timeout, String afterInputUrl, int defaultInput) throws InfrastructureException
-	{
+	public String twimlGetInput(String msgMp3Url, String tts, int digits, int timeout, String afterInputUrl, int defaultInput) throws InfrastructureException {
 		logger.debug("{}/{}/{}/{}/{}/{}", msgMp3Url, tts, digits, timeout, afterInputUrl, defaultInput);
 		
-		try
-		{
+		try {
 			// http://www.twilio.com/docs/quickstart/java/twiml/record-caller-leave-message
 			TwiMLResponse resp = new TwiMLResponse();	
 			Gather gather = new Gather();
@@ -364,13 +362,12 @@ public class CFTwilio
 				redirect.setMethod("POST");
 				resp.append(redirect);
 			} else {
+				logger.debug("No input or default input. Hanging up.");
 				resp.append(new Hangup());
 			}
 			
 			return getFullXmlTwiML(resp.toXML());
-		}
-		catch (TwiMLException e)
-		{
+		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error in twimlGetInput: " + e.getMessage(), e);
 		}
 	}
@@ -382,10 +379,8 @@ public class CFTwilio
 	 * @return
 	 * @throws InfrastructureException
 	 */
-	public String twimlRecord(String processUrl, String prompt) throws InfrastructureException
-	{		
-		try
-		{
+	public String twimlRecord(String processUrl, String prompt) throws InfrastructureException {		
+		try {
 			TwiMLResponse resp = new TwiMLResponse();
 			
 			if (Utils.hasLength(prompt) == false){
@@ -402,9 +397,7 @@ public class CFTwilio
 			resp.append(record);
 			
 			return getFullXmlTwiML(resp.toXML());
-		}
-		catch (TwiMLException e)
-		{
+		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error in twimlRecord: " + e.getMessage(), e);
 		}
 	}
@@ -434,17 +427,14 @@ public class CFTwilio
 	 * @return
 	 * @throws InfrastructureException
 	 */
-	public String twimlForwardWithVoicemail(String number, String msgMp3Url, String tts, String voicemailHandlerUrl, int secondsForForwarding, int secondsToRecord) throws InfrastructureException
-	{		
-		try
-		{
+	public String twimlForwardWithVoicemail(String number, String msgMp3Url, String tts, String voicemailHandlerUrl, int secondsForForwarding, int secondsToRecord) throws InfrastructureException {		
+		try {
 			if (secondsForForwarding <= 0) { secondsForForwarding = 15; }
 			if (secondsToRecord <= 0) { secondsToRecord = 3600; }
 			
 			TwiMLResponse resp = new TwiMLResponse();
 			
-			if (Utils.hasLength(number) == true)
-			{
+			if (Utils.hasLength(number) == true) {
 				number = Format.phoneNumber(Format.PHONE_INT, number);
 				logger.debug("Forwarding to: {}", number);
 				Dial dial = new Dial(number);
@@ -453,14 +443,11 @@ public class CFTwilio
 				resp.append(dial);
 			}
 			
-			if (Utils.hasLength(msgMp3Url) == true)
-			{
+			if (Utils.hasLength(msgMp3Url) == true) {
 				logger.debug("Play MP3 msg: {}", msgMp3Url);
 				Play play = new Play(msgMp3Url);
 				resp.append(play);
-			}
-			else
-			{
+			} else {
 				if (Utils.hasLength(tts) == false) { tts = "Please leave a message."; }
 				Say say = new Say(tts);
 				resp.append(say);
@@ -474,9 +461,7 @@ public class CFTwilio
 			resp.append(record);
 			
 			return getFullXmlTwiML(resp.toXML());
-		}
-		catch (TwiMLException e)
-		{
+		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error in twimlForwardWithVoicemail: " + e.getMessage(), e);
 		}
 	}
@@ -499,8 +484,7 @@ public class CFTwilio
 						String vmMsgMp3Url, String vmMsgTTS, int vmSecondsToRecord, String vmHandlerUrl, 
 						boolean transcribe) throws InfrastructureException
 	{		
-		try
-		{
+		try {
 			if (vmSecondsToRecord <= 0) { vmSecondsToRecord = 3600; }
 			
 			TwiMLResponse resp = new TwiMLResponse();
@@ -543,9 +527,7 @@ public class CFTwilio
 			resp.append(record);
 			
 			return getFullXmlTwiML(resp.toXML());
-		}
-		catch (TwiMLException e)
-		{
+		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error in twimlForwardWithVoicemail: " + e.getMessage(), e);
 		}
 	}
@@ -556,19 +538,15 @@ public class CFTwilio
 	 * @return XML to connect to {@number}
 	 * @throws InfrastructureException
 	 */
-	public String twimlDial(String number) throws InfrastructureException
-	{
+	public String twimlDial(String number) throws InfrastructureException {
 		logger.debug("{}", number);
 		
-		try
-		{
+		try {
 			TwiMLResponse resp = new TwiMLResponse();
 			Dial dial = new Dial(number);
 			resp.append(dial);
 			return getFullXmlTwiML(resp.toXML());
-		}
-		catch (TwiMLException e)
-		{
+		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error in twimlDial: " + e.getMessage(), e);
 		}
 	}
@@ -583,10 +561,8 @@ public class CFTwilio
 	 * @return SID for the number phone number
 	 * @throws InfrastructureException
 	 */
-	public String addPhoneNumber(String number, String name, String voiceUrl, String smsUrl, boolean cnamLookup) throws InfrastructureException
-	{
-		try
-		{
+	public String addPhoneNumber(String number, String name, String voiceUrl, String smsUrl, boolean cnamLookup) throws InfrastructureException {
+		try {
 			List<NameValuePair> params = new ArrayList<NameValuePair>();
 		    params.add(new BasicNameValuePair("FriendlyName", name));
 		    params.add(new BasicNameValuePair("PhoneNumber", Format.phoneNumber(Format.PHONE_INT, number)));
@@ -599,16 +575,13 @@ public class CFTwilio
 			IncomingPhoneNumberFactory numberFactory = this.account.getIncomingPhoneNumberFactory();
 			IncomingPhoneNumber pnumber = numberFactory.create(params);
 			return pnumber.getSid();
-		}
-		catch (TwilioRestException e)
-		{
+		} catch (TwilioRestException e) {
 			logger.error(e.getMessage());
 			throw new InfrastructureException("Error adding phone number: " + e.getMessage(), e);
 		}
 	}
 
-	private String getFullXmlTwiML(String xml)
-	{
+	private String getFullXmlTwiML(String xml) {
 		String fullXml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 		fullXml += "\n" + xml;
 		return fullXml;
