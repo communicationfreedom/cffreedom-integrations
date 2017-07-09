@@ -51,6 +51,7 @@ public class CFToodledo
 	private String apiToken = null;
 	private String token = null;
 	private String key = null;
+	private List<Container> contexts = null;
 	
 	/**
 	 * Create an instance of the ToodledoDAO
@@ -182,7 +183,6 @@ public class CFToodledo
 			try {
 				JSONObject task = (JSONObject)itemArray.get(i);
 				if (task.containsKey("id")) {
-					logger.debug("0");
 					List<Container> tags = new ArrayList<>();
 					String code = JsonUtils.getString(task, "id");
 					String title = JsonUtils.getString(task, "title");
@@ -190,8 +190,8 @@ public class CFToodledo
 					String note = JsonUtils.getString(task, "note");
 					String folderName = JsonUtils.getString(task, "folder");
 					String tagList = JsonUtils.getString(task, "tag");
+					String contextId = JsonUtils.getString(task, "context");
 					
-					logger.debug("1");
 					Calendar startDate = null;
 					Calendar startTime = null;
 					Calendar dueDate = null;
@@ -206,7 +206,6 @@ public class CFToodledo
 					}
 					Long dueL = JsonUtils.getLong(task, "duedate");
 					
-					logger.debug("2");
 					try{
 						Long dueTimeL = JsonUtils.getLong(task, "duetime");
 						if (dueTimeL != null) { 
@@ -224,7 +223,6 @@ public class CFToodledo
 						}
 					}
 					
-					logger.debug("3");
 					if (startL != null) {
 						startDate = Convert.toCalendar(startL.longValue()*1000);
 						if (startTimeL != null) {
@@ -250,15 +248,16 @@ public class CFToodledo
 							tags.add(new Container(tag, tag));
 						}
 					}
-		
+					
 					String projectSyncCode = this.getProjectSyncCode(tags);
 					Project project = new Project(projectSyncCode, projectSyncCode, projectSyncCode, "");
 					Container folder = new Container(folderName, folderName);
 		
-					logger.debug("9");
 					if (code != null) {
-						logger.debug("10");
-						tasks.add(new Task(Task.SYS_TOODLEDO, folder, project, code, title, note, meta, startDate, dueDate, tags));
+						Task tsk = new Task(Task.SYS_TOODLEDO, folder, project, code, title, note, meta, startDate, dueDate, tags);
+						tsk.setContext(getContextById(contextId));
+						tasks.add(tsk);
+						
 					} else {
 						logger.debug("Code value is null so skipping");
 					}
@@ -301,7 +300,7 @@ public class CFToodledo
 	
 	// return list of contexts w/ each container having id for code and name for value
 	public List<Container> getContexts() throws NetworkException, ParseException {
-		List<Container> contexts = new ArrayList<>();
+		contexts = new ArrayList<>();
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/contexts/get.php?key=" + this.getKey();
 		String response = HttpUtils.httpGet(url).getDetail();
 		//Utils.output(response);
@@ -326,7 +325,29 @@ public class CFToodledo
 	}
 	
 	/**
-	 * Get the context cooresponding to the name, return null if not found
+	 * Get the context corresponding to the id, return null if not found
+	 * @param name
+	 * @return
+	 * @throws NetworkException
+	 * @throws ParseException
+	 */
+	public Container getContextById(String id) throws NetworkException, ParseException {
+		Container ctx = null;
+		List<Container> contexts = getContexts();
+		for (Container context : contexts) {
+			if ((ctx == null) && (context.getCode().equals(id))) {
+				logger.debug("Found context: {}", id);
+				ctx = context;
+			}
+		}
+		if (ctx == null) {
+			logger.debug("Context not found: {}", id);
+		}
+		return ctx;
+	}
+	
+	/**
+	 * Get the context corresponding to the name, return null if not found
 	 * @param name
 	 * @return
 	 * @throws NetworkException
@@ -336,7 +357,7 @@ public class CFToodledo
 		Container ctx = null;
 		List<Container> contexts = getContexts();
 		for (Container context : contexts) {
-			if ((ctx == null) && (context.getValue().equalsIgnoreCase(name))) {
+			if ((ctx == null) && (context.getValue().equals(name))) {
 				logger.debug("Found context: {}", name);
 				ctx = context;
 			}
