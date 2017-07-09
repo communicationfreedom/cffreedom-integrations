@@ -3,6 +3,7 @@ package com.cffreedom.integrations.toodledo;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Iterator;
 import java.util.List;
 
 import org.json.simple.JSONArray;
@@ -172,9 +173,11 @@ public class CFToodledo
 	public List<Task> getTasks() throws NetworkException, ParseException {
 		final String FIELDS = "meta,folder,context,tag,startdate,starttime,duedate,duetime,note";
 		List<Task> tasks = new ArrayList<>();
+		List<Container> contexts = getContexts();
+		List<Container> folders = getFolders();
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/get.php?key=" + this.getKey() + ";comp=0;fields=" + FIELDS;
 		String response = HttpUtils.httpGet(url).getDetail();
-		//Utils.output(response);
+		Utils.output(response);
 		JSONArray itemArray = JsonUtils.getJsonArray(response);
 		logger.debug("{} tasks retrieved", itemArray.size());
 
@@ -188,58 +191,63 @@ public class CFToodledo
 					String title = JsonUtils.getString(task, "title");
 					String meta = JsonUtils.getString(task, "meta");
 					String note = JsonUtils.getString(task, "note");
-					String folderName = JsonUtils.getString(task, "folder");
+					String folderId = JsonUtils.getString(task, "folder");
 					String tagList = JsonUtils.getString(task, "tag");
 					String contextId = JsonUtils.getString(task, "context");
 					
-					Calendar startDate = null;
-					Calendar startTime = null;
+					// Due date handling
 					Calendar dueDate = null;
 					Calendar dueTime = null;
-					Long startL = JsonUtils.getLong(task, "startdate");
-					String startTimeS = null;
-					Long startTimeL = null;
-					try {
-						startTimeL = JsonUtils.getLong(task, "starttime");
-					} catch (ClassCastException e) {
-						startTimeS = JsonUtils.getString(task, "starttime");
-					}
 					Long dueL = JsonUtils.getLong(task, "duedate");
 					
 					try{
 						Long dueTimeL = JsonUtils.getLong(task, "duetime");
-						if (dueTimeL != null) { 
+						if (dueTimeL != null) { // We have a time
 							dueTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(dueTimeL.longValue()*1000)); 
-							Utils.output(dueTime + "<-- converted");
 						}
 					}catch (Exception e){
-						// If it's not a long it's going to be a string w/ a value of "0" for no time
 						String dueTimeS = JsonUtils.getString(task, "duetime");
-						if (dueTimeS != null) { 
-							if (dueTimeS.equalsIgnoreCase("0") == true) { 
-								dueTime = Convert.toCalendar("1900-01-01 00:00:00", DateTimeUtils.DATE_TIMESTAMP);
-							}
-							else { dueTime = Convert.toCalendar(Convert.toLong(dueTimeS)*1000); }
+						if ((dueTimeS != null) && !dueTimeS.equalsIgnoreCase("0")) {
+							dueTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(Convert.toLong(dueTimeS)*1000));
+						}
+					}
+					
+					if (dueL != null) {
+						dueDate = Convert.toCalendar(dueL.longValue()*1000);
+						if (dueTime != null){ 
+							dueDate = DateTimeUtils.combineDates(dueDate, dueTime);
+						} else {
+							dueDate = DateTimeUtils.stripTime(dueDate); // to make it due first thing in the day
+						}
+					}
+					
+					// Start date handling
+					Calendar startDate = null;
+					Calendar startTime = null;
+					Long startL = JsonUtils.getLong(task, "startdate");
+					
+					try{
+						Long startTimeL = JsonUtils.getLong(task, "starttime");
+						if (startTimeL != null) { // We have a time
+							startTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(startTimeL.longValue()*1000)); 
+						}
+					}catch (Exception e){
+						String startTimeS = JsonUtils.getString(task, "starttime");
+						if ((startTimeS != null) && !startTimeS.equalsIgnoreCase("0")) {
+							startTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(Convert.toLong(startTimeS)*1000));
 						}
 					}
 					
 					if (startL != null) {
 						startDate = Convert.toCalendar(startL.longValue()*1000);
-						if (startTimeL != null) {
-							startTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(startTimeL*1000));
+						if (startTime != null){ 
 							startDate = DateTimeUtils.combineDates(startDate, startTime);
-						} else if (startTimeS != null) {
-							startTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(Convert.toLong(startTimeS)*1000));
-							startDate = DateTimeUtils.combineDates(startDate, startTime);
-						}
-					}
-					if (dueL != null) {
-						dueDate = Convert.toCalendar(dueL.longValue()*1000);
-						if (dueTime != null){ 
-							dueDate = DateTimeUtils.combineDates(dueDate, dueTime);
+						} else {
+							startDate = DateTimeUtils.stripTime(startDate); // to make it start first thing in the day
 						}
 					}
 					
+					// Tag handling
 					if ((tagList != null) && (tagList.trim().length() > 0)) {
 						String[] tagArray = tagList.split(",");
 						for (int x = 0; x < tagArray.length; x++) {
@@ -251,13 +259,12 @@ public class CFToodledo
 					
 					String projectSyncCode = this.getProjectSyncCode(tags);
 					Project project = new Project(projectSyncCode, projectSyncCode, projectSyncCode, "");
-					Container folder = new Container(folderName, folderName);
+					Container folder = getFolderById(folders, folderId);
 		
 					if (code != null) {
 						Task tsk = new Task(Task.SYS_TOODLEDO, folder, project, code, title, note, meta, startDate, dueDate, tags);
-						tsk.setContext(getContextById(contextId));
+						tsk.setContext(getContextById(contexts, contextId));
 						tasks.add(tsk);
-						
 					} else {
 						logger.debug("Code value is null so skipping");
 					}
@@ -273,17 +280,43 @@ public class CFToodledo
 		return tasks;
 	}
 
-	public List<Task> getTasks(Container folder) throws NetworkException, ParseException {
-		List<Task> tasks = new ArrayList<>();
+	/**
+	 * Get the tasks according to the passed in parameters
+	 * @param folderName Tasks with the passed in name will be returned. All tasks if null or doesn't exist.
+	 * @param contextName Tasks with the passed in name will be returned. All tasks if null or doesn't exist.
+	 * @param start Null for all tasks, value to return tasks starting before this date
+	 * @param due Null for all tasks, value to return tasks due before this date
+	 * @return
+	 * @throws NetworkException
+	 * @throws ParseException
+	 */
+	public List<Task> getTasks(String folderName, String contextName, Calendar start, Calendar due) throws NetworkException, ParseException {
+		List<Task> tasks = getTasks();
+		Container folder = getFolder(folderName);
+		Container context = getContext(contextName);
 
-		for (Task task : this.getTasks()) {
-			if (task.getFolder().getValue().equalsIgnoreCase(folder.getValue()) == true)
-			{
-				tasks.add(task);
+		for (Iterator<Task> iter = tasks.listIterator(); iter.hasNext();) {
+			Task task = iter.next();
+			boolean removed = false;
+			if (!removed && (folderName != null) && !task.getFolder().getValue().equals(folder.getValue())) {
+				iter.remove();
+				removed = true;
 			}
+			if (!removed && (contextName != null) && !task.getContext().getValue().equals(context.getValue())) {
+				iter.remove();
+				removed = true;
+			}
+			if (!removed && (start != null) && (task.getStartDate().after(start))) {
+				iter.remove();
+				removed = true;
+			}
+			if (!removed && (due != null) && (task.getDueDate().after(due))) {
+				iter.remove();
+				removed = true;
+			}			
 		}
 
-		logger.info("Returning {} tasks for folder {}", tasks.size(), folder.getValue());
+		logger.info("Returning {} tasks for search", tasks.size());
 		return tasks;
 	}
 	
@@ -296,6 +329,75 @@ public class CFToodledo
 		Long id = JsonUtils.getLong(newItem, "id");
 		logger.debug("New task id: {}", id);
 		return true;
+	}
+	
+	// return list of folders w/ each container having id for code and name for value
+	public List<Container> getFolders() throws NetworkException, ParseException {
+		contexts = new ArrayList<>();
+		String url = HTTP_PROTOCOL + "api.toodledo.com/2/folders/get.php?key=" + this.getKey();
+		String response = HttpUtils.httpGet(url).getDetail();
+		//Utils.output(response);
+		JSONArray itemArray = JsonUtils.getJsonArray(response);
+		logger.debug("{} folders retrieved", itemArray.size());
+		for (int i = 0; i < itemArray.size(); i++) {
+			logger.trace("Item {}", i);
+			try {
+				JSONObject context = (JSONObject)itemArray.get(i);
+				String id = JsonUtils.getString(context, "id");
+				String name = JsonUtils.getString(context, "name");
+				if (Utils.hasLength(name)) {
+					contexts.add(new Container(id, name));
+				}
+			} catch (Exception e) {
+				logger.error("Error processing item "+i, e);
+			}
+		}
+
+		logger.debug("Returning {} folders", contexts.size());
+		return contexts;
+	}
+	
+	/**
+	 * Get the folder corresponding to the id, return folder with zero length string for id and value if not found
+	 * @param name
+	 * @return
+	 * @throws NetworkException
+	 * @throws ParseException
+	 */
+	private Container getFolderById(List<Container> folders, String id) throws NetworkException, ParseException {
+		Container ret = null;
+		for (Container folder : folders) {
+			if ((ret == null) && (folder.getCode().equals(id))) {
+				logger.debug("Found folder: {}", id);
+				ret = folder;
+			}
+		}
+		if (ret == null) {
+			ret = new Container("", "");
+		}
+		return ret;
+	}
+	
+	/**
+	 * Get the folder corresponding to the name, return null if not found
+	 * @param name
+	 * @return
+	 * @throws NetworkException
+	 * @throws ParseException
+	 */
+	public Container getFolder(String name) throws NetworkException, ParseException {
+		Container ret = null;
+		List<Container> folders = getFolders();
+		for (Container folder : folders) {
+			if ((ret == null) && (folder.getValue().equals(name))) {
+				logger.debug("Found folder: {}", name);
+				ret = folder;
+			}
+		}
+		if (ret == null) {
+			logger.debug("Folder not found: {}", name);
+		}
+		return ret;
 	}
 	
 	// return list of contexts w/ each container having id for code and name for value
@@ -325,15 +427,14 @@ public class CFToodledo
 	}
 	
 	/**
-	 * Get the context corresponding to the id, return null if not found
+	 * Get the context corresponding to the id, return context with zero length string for id and value if not found
 	 * @param name
 	 * @return
 	 * @throws NetworkException
 	 * @throws ParseException
 	 */
-	public Container getContextById(String id) throws NetworkException, ParseException {
+	private Container getContextById(List<Container> contexts, String id) throws NetworkException, ParseException {
 		Container ctx = null;
-		List<Container> contexts = getContexts();
 		for (Container context : contexts) {
 			if ((ctx == null) && (context.getCode().equals(id))) {
 				logger.debug("Found context: {}", id);
@@ -341,7 +442,7 @@ public class CFToodledo
 			}
 		}
 		if (ctx == null) {
-			logger.debug("Context not found: {}", id);
+			ctx = new Container("", "");
 		}
 		return ctx;
 	}
