@@ -1,8 +1,10 @@
 package com.cffreedom.integrations.toodledo;
 
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
@@ -150,12 +152,10 @@ public class CFToodledo
 		return this.key;
 	}
 
-	private String getProjectSyncCode(ArrayList<Container> tags)
-	{
+	private String getProjectSyncCode(List<Container> tags) {
 		String code = "srUNKNOWN";
 
-		for (Container tag : tags)
-		{
+		for (Container tag : tags) {
 			String tagName = tag.getValue();
 			if ((tagName.length() >= 3) 
 					&& (tagName.startsWith("sr") == true) 
@@ -169,93 +169,119 @@ public class CFToodledo
 		return code;
 	}
 
-	public ArrayList<Task> getTasks() throws NetworkException, ParseException
-	{
+	public List<Task> getTasks() throws NetworkException, ParseException {
 		final String FIELDS = "meta,folder,context,tag,startdate,starttime,duedate,duetime,note";
-		ArrayList<Task> tasks = new ArrayList<Task>();
+		List<Task> tasks = new ArrayList<>();
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/get.php?key=" + this.getKey() + ";comp=0;fields=" + FIELDS;
 		String response = HttpUtils.httpGet(url).getDetail();
 		Utils.output(response);
 		JSONArray tasksArray = JsonUtils.getJsonArray(response);
+		logger.debug("{} tasks retrieved", tasksArray.size());
 
-		Iterator<JSONObject> iterator = tasksArray.iterator();
-		while (iterator.hasNext())
-		{
-			JSONObject task = iterator.next();
-			ArrayList<Container> tags = new ArrayList<Container>();
-			String code = JsonUtils.getString(task, "id");
-			String title = JsonUtils.getString(task, "title");
-			String meta = JsonUtils.getString(task, "meta");
-			String note = JsonUtils.getString(task, "note");
-			String folderName = JsonUtils.getString(task, "folder");
-			String tagList = JsonUtils.getString(task, "tag");
-			
-			Date startDate = null;
-			Date startTime = null;
-			Date dueDate = null;
-			Date dueTime = null;
-			Long startL = JsonUtils.getLong(task, "startdate");
-			String startTimeS = JsonUtils.getString(task, "starttime");
-			Long dueL = JsonUtils.getLong(task, "duedate");
-			
-			try{
-				Long dueTimeL = JsonUtils.getLong(task, "duetime");
-				if (dueTimeL != null) { dueTime = DateTimeUtils.gmtToLocal(Convert.toDate(dueTimeL.longValue()*1000)); Utils.output(dueTime + "<-- converted"); }
-			}catch (Exception e){
-				// If it's not a long it's going to be a string w/ a value of "0" for no time
-				String dueTimeS = JsonUtils.getString(task, "duetime");
-				if (dueTimeS != null) 
-				{ 
-					if (dueTimeS.equalsIgnoreCase("0") == true) { dueTime = Convert.toDate("1900-01-01 00:00:00", DateTimeUtils.DATE_TIMESTAMP); }
-					else { dueTime = Convert.toDate(Convert.toLong(dueTimeS)*1000); }
+		//Iterator<JSONObject> iterator = tasksArray.iterator();
+		//while (iterator.hasNext()) {
+		for (int i = 0; i < tasksArray.size(); i++) {
+			logger.debug("Item {}", i);
+			try {
+				//JSONObject task = iterator.next();
+				JSONObject task = (JSONObject)tasksArray.get(i);
+				if (task.containsKey("id")) {
+					logger.debug("0");
+					List<Container> tags = new ArrayList<>();
+					String code = JsonUtils.getString(task, "id");
+					String title = JsonUtils.getString(task, "title");
+					String meta = JsonUtils.getString(task, "meta");
+					String note = JsonUtils.getString(task, "note");
+					String folderName = JsonUtils.getString(task, "folder");
+					String tagList = JsonUtils.getString(task, "tag");
+					
+					logger.debug("1");
+					Calendar startDate = null;
+					Calendar startTime = null;
+					Calendar dueDate = null;
+					Calendar dueTime = null;
+					Long startL = JsonUtils.getLong(task, "startdate");
+					String startTimeS = null;
+					Long startTimeL = null;
+					try {
+						startTimeL = JsonUtils.getLong(task, "starttime");
+					} catch (ClassCastException e) {
+						startTimeS = JsonUtils.getString(task, "starttime");
+					}
+					Long dueL = JsonUtils.getLong(task, "duedate");
+					
+					logger.debug("2");
+					try{
+						Long dueTimeL = JsonUtils.getLong(task, "duetime");
+						if (dueTimeL != null) { 
+							dueTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(dueTimeL.longValue()*1000)); 
+							Utils.output(dueTime + "<-- converted");
+						}
+					}catch (Exception e){
+						// If it's not a long it's going to be a string w/ a value of "0" for no time
+						String dueTimeS = JsonUtils.getString(task, "duetime");
+						if (dueTimeS != null) { 
+							if (dueTimeS.equalsIgnoreCase("0") == true) { 
+								dueTime = Convert.toCalendar("1900-01-01 00:00:00", DateTimeUtils.DATE_TIMESTAMP);
+							}
+							else { dueTime = Convert.toCalendar(Convert.toLong(dueTimeS)*1000); }
+						}
+					}
+					
+					logger.debug("3");
+					if (startL != null) {
+						startDate = Convert.toCalendar(startL.longValue()*1000);
+						if (startTimeL != null) {
+							startTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(startTimeL*1000));
+							startDate = DateTimeUtils.combineDates(startDate, startTime);
+						} else if (startTimeS != null) {
+							startTime = DateTimeUtils.gmtToLocal(Convert.toCalendar(Convert.toLong(startTimeS)*1000));
+							startDate = DateTimeUtils.combineDates(startDate, startTime);
+						}
+					}
+					if (dueL != null) {
+						dueDate = Convert.toCalendar(dueL.longValue()*1000);
+						if (dueTime != null){ 
+							dueDate = DateTimeUtils.combineDates(dueDate, dueTime);
+						}
+					}
+					
+					if ((tagList != null) && (tagList.trim().length() > 0)) {
+						String[] tagArray = tagList.split(",");
+						for (int x = 0; x < tagArray.length; x++) {
+							String tag = tagArray[x].trim();
+							// System.out.println("tag --> " + tag);
+							tags.add(new Container(tag, tag));
+						}
+					}
+		
+					String projectSyncCode = this.getProjectSyncCode(tags);
+					Project project = new Project(projectSyncCode, projectSyncCode, projectSyncCode, "");
+					Container folder = new Container(folderName, folderName);
+		
+					logger.debug("9");
+					if (code != null) {
+						logger.debug("10");
+						tasks.add(new Task(Task.SYS_TOODLEDO, folder, project, code, title, note, meta, startDate, dueDate, tags));
+					} else {
+						logger.debug("Code value is null so skipping");
+					}
+				} else {
+					logger.debug("Skipping entry w/o id key");
 				}
-			}
-			
-			if (startL != null)
-			{
-				startDate = Convert.toDate(startL.longValue()*1000);
-				if (startTimeS != null)
-				{
-					startTime = Convert.toDate(Convert.toLong(startTimeS)*1000);
-					startDate = DateTimeUtils.combineDates(startDate, startTime);
-				}
-			}
-			if (dueL != null)
-			{
-				dueDate = Convert.toDate(dueL.longValue()*1000);
-				if (dueTime != null){ dueDate = DateTimeUtils.combineDates(dueDate, dueTime); }
-			}
-			
-			if ((tagList != null) && (tagList.trim().length() > 0))
-			{
-				String[] tagArray = tagList.split(",");
-				for (int x = 0; x < tagArray.length; x++)
-				{
-					String tag = tagArray[x].trim();
-					// System.out.println("tag --> " + tag);
-					tags.add(new Container(tag, tag));
-				}
-			}
-
-			String projectSyncCode = this.getProjectSyncCode(tags);
-			Project project = new Project(projectSyncCode, projectSyncCode, projectSyncCode, "");
-			Container folder = new Container(folderName, folderName);
-
-			if (code != null)
-			{
-				tasks.add(new Task(Task.SYS_TOODLEDO, folder, project, code, title, note, meta, startDate, dueDate, tags));
+			} catch (Exception e) {
+				logger.error("Error processing item "+i, e);
 			}
 		}
 
+		logger.debug("Returning {} tasks", tasks.size());
 		return tasks;
 	}
 
-	public ArrayList<Task> getTasks(Container folder) throws NetworkException, ParseException
-	{
-		ArrayList<Task> tasks = new ArrayList<Task>();
+	public List<Task> getTasks(Container folder) throws NetworkException, ParseException {
+		List<Task> tasks = new ArrayList<>();
 
-		for (Task task : this.getTasks())
-		{
+		for (Task task : this.getTasks()) {
 			if (task.getFolder().getValue().equalsIgnoreCase(folder.getValue()) == true)
 			{
 				tasks.add(task);
@@ -266,8 +292,7 @@ public class CFToodledo
 		return tasks;
 	}
 	
-	public boolean insertTask(Task task) throws NetworkException, ParseException
-	{
+	public boolean insertTask(Task task) throws NetworkException, ParseException {
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/add.php?key="+this.getKey()+";tasks=[{\"title\"%3A\""+task.getTitle()+"\"%2C\"folder\"%3A\""+task.getFolder().getCode()+"\"}];fields=folder";
 		String response = HttpUtils.httpGet(url).getDetail();
 		logger.debug("{}", response);

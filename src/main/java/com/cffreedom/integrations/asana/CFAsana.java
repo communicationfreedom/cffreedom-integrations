@@ -2,9 +2,10 @@ package com.cffreedom.integrations.asana;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Date;
+import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 
 import org.apache.commons.codec.binary.Base64;
 import org.json.simple.JSONArray;
@@ -80,15 +81,13 @@ public class CFAsana
 		return code;
 	}
 
-	public ArrayList<Container> getWorkspaces() throws ParseException
-	{
-		ArrayList<Container> workspaces = new ArrayList<Container>();
+	public List<Container> getWorkspaces() throws ParseException {
+		List<Container> workspaces = new ArrayList<>();
 
 		JSONArray wspaces = JsonUtils.getJsonArray(this.getUserData(), "workspaces");
 
 		Iterator<JSONObject> iterator = wspaces.iterator();
-		while (iterator.hasNext())
-		{
+		while (iterator.hasNext()) {
 			JSONObject workspace = iterator.next();
 			Long id = JsonUtils.getLong(workspace, "id");
 			String code = Convert.toString(id);
@@ -100,20 +99,17 @@ public class CFAsana
 		return workspaces;
 	}
 
-	public ArrayList<Project> getProjects(Container workspace) throws IOException, ParseException
-	{
+	public List<Project> getProjects(Container workspace) throws IOException, ParseException {
 		logger.debug("Getting projects for workspace: {}", workspace.getValue());
-		ArrayList<Project> projects = new ArrayList<Project>();
+		List<Project> projects = new ArrayList<>();
 
-		try
-		{
+		try {
 			String url = "https://app.asana.com/api/1.0/workspaces/" + workspace.getCode() + "/projects";
 			JSONObject jsonObj = processUrl(url);
 			JSONArray tasksArray = JsonUtils.getJsonArray(jsonObj, "data");
 
 			Iterator<JSONObject> iterator = tasksArray.iterator();
-			while (iterator.hasNext())
-			{
+			while (iterator.hasNext()) {
 				JSONObject task = iterator.next();
 				Long id = JsonUtils.getLong(task, "id");
 				String code = Convert.toString(id);
@@ -126,29 +122,24 @@ public class CFAsana
 					projects.add(new Project(code, syncCode, name, note));
 				}
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			logger.error(e.getMessage());
 		}
 
 		return projects;
 	}
 
-	public ArrayList<Task> getTasks(Container workspace, Project project) throws IOException, ParseException
-	{
+	public List<Task> getTasks(Container workspace, Project project) throws IOException, ParseException {
 		logger.debug("Getting tasks for project: {}", project.getName());
-		ArrayList<Task> tasks = new ArrayList<Task>();
+		List<Task> tasks = new ArrayList<>();
 
-		try
-		{
+		try {
 			String url = "https://app.asana.com/api/1.0/projects/" + project.getCode() + "/tasks?opt_fields=name,notes,due_on";
 			JSONObject jsonObj = processUrl(url);
 			JSONArray tasksArray = JsonUtils.getJsonArray(jsonObj, "data");
 
 			Iterator<JSONObject> iterator = tasksArray.iterator();
-			while (iterator.hasNext())
-			{
+			while (iterator.hasNext()) {
 				JSONObject task = iterator.next();
 				//Utils.output(task.toJSONString());
 				Long id = JsonUtils.getLong(task, "id");
@@ -157,19 +148,17 @@ public class CFAsana
 				String meta = "";
 				String note = JsonUtils.getString(task, "notes");
 				String due = JsonUtils.getString(task, "due_on");		
-				Date dueDate = Convert.toDate(due, DateTimeUtils.DATE_FILE);
+				Calendar dueDate = Convert.toCalendar(due, DateTimeUtils.DATE_FILE);
 
 				if (code != null)
 				{
 					Task tempTask = new Task(Task.SYS_ASANA, workspace, project, code, title, note, meta, dueDate, dueDate, null);
-					ArrayList<Container> tags = this.getTags(tempTask);
+					List<Container> tags = this.getTags(tempTask);
 					tempTask.setTags(tags);
 					tasks.add(tempTask);
 				}
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			logger.error(e.getMessage());
 		}
 
@@ -177,15 +166,12 @@ public class CFAsana
 		return tasks;
 	}
 
-	public ArrayList<Task> getTasks(Container workspace) throws IOException, ParseException
-	{
-		ArrayList<Project> projects = this.getProjects(workspace);
-		ArrayList<Task> tasks = new ArrayList<Task>();
+	public List<Task> getTasks(Container workspace) throws IOException, ParseException {
+		List<Project> projects = this.getProjects(workspace);
+		List<Task> tasks = new ArrayList<Task>();
 
-		for (Project project : projects)
-		{
-			for (Task task : this.getTasks(workspace, project))
-			{
+		for (Project project : projects) {
+			for (Task task : this.getTasks(workspace, project)) {
 				tasks.add(task);
 			}
 		}
@@ -194,19 +180,16 @@ public class CFAsana
 		return tasks;
 	}
 
-	public ArrayList<Container> getTags(Task task) throws IOException, ParseException
-	{
-		ArrayList<Container> tags = new ArrayList<Container>();
+	public List<Container> getTags(Task task) throws IOException, ParseException {
+		List<Container> tags = new ArrayList<Container>();
 
-		try
-		{
+		try {
 			String url = "https://app.asana.com/api/1.0/tasks/" + task.getCode() + "/tags";
 			JSONObject jsonObj = processUrl(url);
 			JSONArray tasksArray = JsonUtils.getJsonArray(jsonObj, "data");
 
 			Iterator<JSONObject> iterator = tasksArray.iterator();
-			while (iterator.hasNext())
-			{
+			while (iterator.hasNext()) {
 				JSONObject tag = iterator.next();
 				Long id = JsonUtils.getLong(tag, "id");
 				String code = Convert.toString(id);
@@ -217,17 +200,14 @@ public class CFAsana
 					tags.add(new Container(code, name));
 				}
 			}
-		}
-		catch (Exception e)
-		{
+		} catch (Exception e) {
 			logger.error(e.getMessage());
 		}
 
 		return tags;
 	}
 	
-	private JSONObject processUrl(String url) throws NetworkException, ParseException
-	{
+	private JSONObject processUrl(String url) throws NetworkException, ParseException {
 		HashMap<String, String> reqProps = new HashMap<String, String>();
 		reqProps.put("Authorization", this.getAuthVal());
 		String response = HttpUtils.httpGetWithReqProp(url, reqProps);
