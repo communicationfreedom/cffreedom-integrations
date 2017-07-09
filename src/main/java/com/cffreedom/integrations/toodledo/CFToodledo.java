@@ -3,7 +3,6 @@ package com.cffreedom.integrations.toodledo;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.Iterator;
 import java.util.List;
 
 import org.json.simple.JSONArray;
@@ -174,17 +173,14 @@ public class CFToodledo
 		List<Task> tasks = new ArrayList<>();
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/get.php?key=" + this.getKey() + ";comp=0;fields=" + FIELDS;
 		String response = HttpUtils.httpGet(url).getDetail();
-		Utils.output(response);
-		JSONArray tasksArray = JsonUtils.getJsonArray(response);
-		logger.debug("{} tasks retrieved", tasksArray.size());
+		//Utils.output(response);
+		JSONArray itemArray = JsonUtils.getJsonArray(response);
+		logger.debug("{} tasks retrieved", itemArray.size());
 
-		//Iterator<JSONObject> iterator = tasksArray.iterator();
-		//while (iterator.hasNext()) {
-		for (int i = 0; i < tasksArray.size(); i++) {
-			logger.debug("Item {}", i);
+		for (int i = 0; i < itemArray.size(); i++) {
+			logger.trace("Item {}", i);
 			try {
-				//JSONObject task = iterator.next();
-				JSONObject task = (JSONObject)tasksArray.get(i);
+				JSONObject task = (JSONObject)itemArray.get(i);
 				if (task.containsKey("id")) {
 					logger.debug("0");
 					List<Container> tags = new ArrayList<>();
@@ -296,10 +292,75 @@ public class CFToodledo
 		String url = HTTP_PROTOCOL + "api.toodledo.com/2/tasks/add.php?key="+this.getKey()+";tasks=[{\"title\"%3A\""+task.getTitle()+"\"%2C\"folder\"%3A\""+task.getFolder().getCode()+"\"}];fields=folder";
 		String response = HttpUtils.httpGet(url).getDetail();
 		logger.debug("{}", response);
-		JSONArray tasksArray = JsonUtils.getJsonArray(response);
-		JSONObject newTask = (JSONObject)(tasksArray.get(0));
-		Long id = JsonUtils.getLong(newTask, "id");
+		JSONArray itemArray = JsonUtils.getJsonArray(response);
+		JSONObject newItem = (JSONObject)(itemArray.get(0));
+		Long id = JsonUtils.getLong(newItem, "id");
 		logger.debug("New task id: {}", id);
-		return false;
+		return true;
+	}
+	
+	// return list of contexts w/ each container having id for code and name for value
+	public List<Container> getContexts() throws NetworkException, ParseException {
+		List<Container> contexts = new ArrayList<>();
+		String url = HTTP_PROTOCOL + "api.toodledo.com/2/contexts/get.php?key=" + this.getKey();
+		String response = HttpUtils.httpGet(url).getDetail();
+		//Utils.output(response);
+		JSONArray itemArray = JsonUtils.getJsonArray(response);
+		logger.debug("{} contexts retrieved", itemArray.size());
+		for (int i = 0; i < itemArray.size(); i++) {
+			logger.trace("Item {}", i);
+			try {
+				JSONObject context = (JSONObject)itemArray.get(i);
+				String id = JsonUtils.getString(context, "id");
+				String name = JsonUtils.getString(context, "name");
+				if (Utils.hasLength(name)) {
+					contexts.add(new Container(id, name));
+				}
+			} catch (Exception e) {
+				logger.error("Error processing item "+i, e);
+			}
+		}
+
+		logger.debug("Returning {} contexts", contexts.size());
+		return contexts;
+	}
+	
+	/**
+	 * Get the context cooresponding to the name, return null if not found
+	 * @param name
+	 * @return
+	 * @throws NetworkException
+	 * @throws ParseException
+	 */
+	public Container getContext(String name) throws NetworkException, ParseException {
+		Container ctx = null;
+		List<Container> contexts = getContexts();
+		for (Container context : contexts) {
+			if ((ctx == null) && (context.getValue().equalsIgnoreCase(name))) {
+				logger.debug("Found context: {}", name);
+				ctx = context;
+			}
+		}
+		if (ctx == null) {
+			logger.debug("Context not found: {}", name);
+		}
+		return ctx;
+	}
+	
+	public Container insertContext(String name) throws NetworkException, ParseException {
+		Container existing = getContext(name);
+		if (existing != null) {
+			logger.info("Context already exists: {}", name);
+			return existing;
+		} else {
+			String url = HTTP_PROTOCOL + "api.toodledo.com/2/contexts/add.php?key="+this.getKey()+";name="+name.replace(' ', '+');
+			String response = HttpUtils.httpGet(url).getDetail();
+			logger.debug("{}", response);
+			JSONArray itemArray = JsonUtils.getJsonArray(response);
+			JSONObject newItem = (JSONObject)(itemArray.get(0));
+			String id = JsonUtils.getString(newItem, "id");
+			logger.debug("New context id: {}", id);
+			return new Container(id, name);
+		}
 	}
 }
