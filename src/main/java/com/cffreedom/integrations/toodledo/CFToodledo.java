@@ -71,48 +71,74 @@ public class CFToodledo
 	public CFToodledo(String userEmail, String userPassword, String apiToken) throws Exception {
 		logger.debug("User: {}", userEmail);
 		
-		this.userEmail = userEmail;
-		this.userPass = userPassword;
-		this.apiToken = apiToken;
+		setUserEmail(userEmail);
+		setUserPass(userPassword);
+		setApiToken(apiToken);
 		
-		if (this.token == null) {
-			logger.debug("No cached token so lets go get one");
-			String sig = Convert.toMd5(this.getUserEmail() + this.apiToken);
+		if (this.getToken() == null) {
+			logger.debug("Getting token");
+			String sig = Convert.toMd5(this.getUserEmail() + this.getApiToken());
 			String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
 			String response = HttpUtils.httpGet(url).getDetail();
+			logger.debug(response);
 			JSONObject jsonObj = JsonUtils.getJsonObject(response);
 			String userId = JsonUtils.getString(jsonObj, "userid");
 			logger.debug("Getting encoded login for {}/{}", this.getUserEmail(), userId);
-			String encodedLogin = Convert.toMd5(userId + this.apiToken);
+			String encodedLogin = Convert.toMd5(userId + this.getApiToken());
 			url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
 			response = HttpUtils.httpGet(url).getDetail();
+			logger.debug(response);
 			jsonObj = JsonUtils.getJsonObject(response);
-			this.token = JsonUtils.getString(jsonObj, "token");
+			setToken(JsonUtils.getString(jsonObj, "token"));
 		}
 		
-		if (this.token == null) {
+		if (this.getToken() == null) {
 			throw new InfrastructureException("Login failed. Token is null.");
 		} else {
-			logger.debug("Token: {}", this.token);
+			logger.debug("Token: {}", this.getToken());
 		}
 
-		this.key = Convert.toMd5(Convert.toMd5(this.getUserPass()) + this.apiToken + this.getToken());
+		setKey(Convert.toMd5(Convert.toMd5(this.getUserPass()) + this.getApiToken() + this.getToken()));
 	}
 
 	private String getUserEmail() {
 		return this.userEmail;
 	}
+	
+	private void setUserEmail(String userEmail) {
+		this.userEmail = userEmail;
+	}
 
 	private String getUserPass() {
 		return this.userPass;
+	}
+	
+	private void setUserPass(String userPass) {
+		this.userPass = userPass;
+	}
+
+	private String getApiToken() {
+		return this.apiToken;
+	}
+	
+	private void setApiToken(String apiToken) {
+		this.apiToken = apiToken;
 	}
 
 	public String getToken() {
 		return this.token;
 	}
+	
+	private void setToken(String token) {
+		this.token = token;
+	}
 
 	private String getKey() {
 		return this.key;
+	}
+	
+	private void setKey(String key) {
+		this.key = key;
 	}
 
 	private String getProjectSyncCode(List<Container> tags) {
