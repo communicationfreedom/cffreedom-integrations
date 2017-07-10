@@ -2,7 +2,6 @@ package com.cffreedom.integrations.toodledo;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.List;
 
@@ -19,8 +18,6 @@ import com.cffreedom.exceptions.NetworkException;
 import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
 import com.cffreedom.utils.JsonUtils;
-import com.cffreedom.utils.KeyValueFileMgr;
-import com.cffreedom.utils.SystemUtils;
 import com.cffreedom.utils.Utils;
 import com.cffreedom.utils.net.HttpUtils;
 
@@ -70,42 +67,14 @@ public class CFToodledo
 	 * Changes:
 	 * 2013-06-13	markjacobsen.net 	Enhancements for caching tokens and handling due/start dates/times
 	 */
-	public CFToodledo(String userEmail, String userPassword, String apiToken) throws Exception
-	{
+	public CFToodledo(String userEmail, String userPassword, String apiToken) throws Exception {
 		logger.debug("User: {}", userEmail);
 		
 		this.userEmail = userEmail;
 		this.userPass = userPassword;
 		this.apiToken = apiToken;
-
-		String tokenFile = null;
-		KeyValueFileMgr tokenCache = null;
 		
-		try
-		{
-			tokenFile = SystemUtils.getDirTemp() + SystemUtils.getPathSeparator() + "CFToodledo.tokens";
-			tokenCache = new KeyValueFileMgr(tokenFile);
-			if (tokenCache.keyExists(this.getUserEmail()) == true)
-			{
-				String cachedVal = tokenCache.getEntryAsString(this.getUserEmail());
-				logger.debug("Cached token exists for: {}, value: {}", this.getUserEmail(), cachedVal);
-				String[] value = cachedVal.split("\\|");
-				if (Convert.toDate(value[1], DateTimeUtils.DATE_TIMESTAMP).after(DateTimeUtils.dateAdd(new Date(), -2, DateTimeUtils.DATE_PART_HOUR)) == true)
-				{
-					logger.debug("Using cached token");
-					this.token = value[0];
-				}
-				else
-				{
-					logger.debug("Removing expired token");
-					tokenCache.removeEntry(this.getUserEmail());
-				}
-			}
-		}
-		catch (Exception e){ logger.error("Error attempting to get token from cache file"); }
-		
-		if (this.token == null)
-		{
+		if (this.token == null) {
 			logger.debug("No cached token so lets go get one");
 			String sig = Convert.toMd5(this.getUserEmail() + this.apiToken);
 			String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
@@ -117,15 +86,6 @@ public class CFToodledo
 			response = HttpUtils.httpGet(url).getDetail();
 			jsonObj = JsonUtils.getJsonObject(response);
 			this.token = JsonUtils.getString(jsonObj, "token");
-			
-			try
-			{
-				if (tokenCache.addEntry(this.getUserEmail(), this.token + "|" + Convert.toString(new Date(), DateTimeUtils.DATE_TIMESTAMP)) == true)
-				{
-					logger.debug("Stored token in cache file");
-				}
-			}
-			catch (Exception e){ logger.error("Error attempting to store token in cache file"); }
 		}
 		
 		logger.debug("Token: {}", this.token);
@@ -133,23 +93,19 @@ public class CFToodledo
 		this.key = Convert.toMd5(Convert.toMd5(this.getUserPass()) + this.apiToken + this.getToken());
 	}
 
-	private String getUserEmail()
-	{
+	private String getUserEmail() {
 		return this.userEmail;
 	}
 
-	private String getUserPass()
-	{
+	private String getUserPass() {
 		return this.userPass;
 	}
 
-	public String getToken()
-	{
+	public String getToken() {
 		return this.token;
 	}
 
-	private String getKey()
-	{
+	private String getKey() {
 		return this.key;
 	}
 
@@ -159,8 +115,8 @@ public class CFToodledo
 		for (Container tag : tags) {
 			String tagName = tag.getValue();
 			if ((tagName.length() >= 3) 
-					&& (tagName.startsWith("sr") == true) 
-					&& (Utils.isInt(tagName.replaceFirst("sr", "")) == true))
+				&& (tagName.startsWith("sr")) 
+				&& (Utils.isInt(tagName.replaceFirst("sr", ""), false)))
 			{
 				code = tagName;
 				break;
