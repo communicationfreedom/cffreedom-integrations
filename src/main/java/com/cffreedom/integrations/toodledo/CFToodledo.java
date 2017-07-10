@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import com.cffreedom.beans.Container;
 import com.cffreedom.beans.Project;
 import com.cffreedom.beans.Task;
+import com.cffreedom.exceptions.InfrastructureException;
 import com.cffreedom.exceptions.NetworkException;
 import com.cffreedom.utils.Convert;
 import com.cffreedom.utils.DateTimeUtils;
@@ -81,6 +82,7 @@ public class CFToodledo
 			String response = HttpUtils.httpGet(url).getDetail();
 			JSONObject jsonObj = JsonUtils.getJsonObject(response);
 			String userId = JsonUtils.getString(jsonObj, "userid");
+			logger.debug("Getting encoded login for {}/{}", this.getUserEmail(), userId);
 			String encodedLogin = Convert.toMd5(userId + this.apiToken);
 			url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
 			response = HttpUtils.httpGet(url).getDetail();
@@ -88,7 +90,11 @@ public class CFToodledo
 			this.token = JsonUtils.getString(jsonObj, "token");
 		}
 		
-		logger.debug("Token: {}", this.token);
+		if (this.token == null) {
+			throw new InfrastructureException("Login failed. Token is null.");
+		} else {
+			logger.debug("Token: {}", this.token);
+		}
 
 		this.key = Convert.toMd5(Convert.toMd5(this.getUserPass()) + this.apiToken + this.getToken());
 	}
