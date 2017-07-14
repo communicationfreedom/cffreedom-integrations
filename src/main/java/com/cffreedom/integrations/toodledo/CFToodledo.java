@@ -390,27 +390,39 @@ public class CFToodledo
 	
 	// return list of contexts w/ each container having id for code and name for value
 	public List<Container> getContexts() throws NetworkException, ParseException {
-		contexts = new ArrayList<>();
-		String url = HTTP_PROTOCOL + "api.toodledo.com/2/contexts/get.php?key=" + this.getKey();
-		String response = HttpUtils.httpGet(url).getDetail();
-		//Utils.output(response);
-		JSONArray itemArray = JsonUtils.getJsonArray(response);
-		logger.debug("{} contexts retrieved", itemArray.size());
-		for (int i = 0; i < itemArray.size(); i++) {
-			logger.trace("Item {}", i);
-			try {
-				JSONObject context = (JSONObject)itemArray.get(i);
-				String id = JsonUtils.getString(context, "id");
-				String name = JsonUtils.getString(context, "name");
-				if (Utils.hasLength(name)) {
-					contexts.add(new Container(id, name));
+		String response = null;
+		String source = "web";
+		try {
+			String url = HTTP_PROTOCOL + "api.toodledo.com/2/contexts/get.php?key=" + this.getKey();
+			response = HttpUtils.httpGet(url).getDetail();
+			//Utils.output(response);
+			JSONArray itemArray = JsonUtils.getJsonArray(response);
+			logger.debug("{} contexts retrieved", itemArray.size());
+			contexts = new ArrayList<>(); // Intentionally not reinitializing the array until we get here to make sure we get a good JSON array back
+			for (int i = 0; i < itemArray.size(); i++) {
+				logger.trace("Item {}", i);
+				try {
+					JSONObject context = (JSONObject)itemArray.get(i);
+					String id = JsonUtils.getString(context, "id");
+					String name = JsonUtils.getString(context, "name");
+					if (Utils.hasLength(name)) {
+						contexts.add(new Container(id, name));
+					}
+				} catch (Exception e) {
+					logger.error("Error processing item "+i, e);
 				}
-			} catch (Exception e) {
-				logger.error("Error processing item "+i, e);
+			}
+		} catch (Exception e) {
+			logger.error("Error getting contexts. Response: "+response, e);
+			if (contexts == null) {
+				// We haven't initialized/cached the contexts so let them know
+				throw e;
+			} else {
+				source = "cache";
 			}
 		}
 
-		logger.debug("Returning {} contexts", contexts.size());
+		logger.debug("Returning {} contexts from {}", contexts.size(), source);
 		return contexts;
 	}
 	
