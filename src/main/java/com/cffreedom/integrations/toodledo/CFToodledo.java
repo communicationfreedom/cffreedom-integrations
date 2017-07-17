@@ -50,6 +50,7 @@ public class CFToodledo
 	private String apiToken = null;
 	private String token = null;
 	private String key = null;
+	private List<Container> folders = null;
 	private List<Container> contexts = null;
 	
 	/**
@@ -321,28 +322,40 @@ public class CFToodledo
 	
 	// return list of folders w/ each container having id for code and name for value
 	public List<Container> getFolders() throws NetworkException, ParseException {
-		contexts = new ArrayList<>();
-		String url = HTTP_PROTOCOL + "api.toodledo.com/2/folders/get.php?key=" + this.getKey();
-		String response = HttpUtils.httpGet(url).getDetail();
-		//Utils.output(response);
-		JSONArray itemArray = JsonUtils.getJsonArray(response);
-		logger.debug("{} folders retrieved", itemArray.size());
-		for (int i = 0; i < itemArray.size(); i++) {
-			logger.trace("Item {}", i);
-			try {
-				JSONObject context = (JSONObject)itemArray.get(i);
-				String id = JsonUtils.getString(context, "id");
-				String name = JsonUtils.getString(context, "name");
-				if (Utils.hasLength(name)) {
-					contexts.add(new Container(id, name));
+		String response = null;
+		String source = "web";
+		try {
+			String url = HTTP_PROTOCOL + "api.toodledo.com/2/folders/get.php?key=" + this.getKey();
+			response = HttpUtils.httpGet(url).getDetail();
+			//Utils.output(response);
+			JSONArray itemArray = JsonUtils.getJsonArray(response);
+			logger.debug("{} folders retrieved", itemArray.size());
+			folders = new ArrayList<>();
+			for (int i = 0; i < itemArray.size(); i++) {
+				logger.trace("Item {}", i);
+				try {
+					JSONObject context = (JSONObject)itemArray.get(i);
+					String id = JsonUtils.getString(context, "id");
+					String name = JsonUtils.getString(context, "name");
+					if (Utils.hasLength(name)) {
+						folders.add(new Container(id, name));
+					}
+				} catch (Exception e) {
+					logger.error("Error processing item "+i, e);
 				}
-			} catch (Exception e) {
-				logger.error("Error processing item "+i, e);
+			}
+		} catch (Exception e) {
+			logger.error("Error getting folders. Response: "+response, e);
+			if (folders == null) {
+				// We haven't initialized/cached the contexts so let them know
+				throw e;
+			} else {
+				source = "cache";
 			}
 		}
 
-		logger.debug("Returning {} folders", contexts.size());
-		return contexts;
+		logger.debug("Returning {} folders from {}", folders.size(), source);
+		return folders;
 	}
 	
 	/**
