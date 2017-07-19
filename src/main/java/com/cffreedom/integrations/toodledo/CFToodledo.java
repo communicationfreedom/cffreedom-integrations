@@ -45,6 +45,7 @@ public class CFToodledo
 	private final String APP_ID = "cffreedom";
 	private final String HTTP_PROTOCOL = "https://";
 
+	private Calendar initDate = null;
 	private String userEmail = null;
 	private String userPass = null;
 	private String apiToken = null;
@@ -77,21 +78,25 @@ public class CFToodledo
 		setApiToken(apiToken);
 		
 		if (this.getToken() == null) {
-			logger.debug("Getting token");
-			String sig = Convert.toMd5(this.getUserEmail() + this.getApiToken());
-			String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
-			String response = HttpUtils.httpGet(url).getDetail();
-			logger.debug(response);
-			JSONObject jsonObj = JsonUtils.getJsonObject(response);
-			String userId = JsonUtils.getString(jsonObj, "userid");
-			logger.debug("Getting encoded login for {}/{}", this.getUserEmail(), userId);
-			String encodedLogin = Convert.toMd5(userId + this.getApiToken());
-			url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
-			response = HttpUtils.httpGet(url).getDetail();
-			logger.debug(response);
-			jsonObj = JsonUtils.getJsonObject(response);
-			setToken(JsonUtils.getString(jsonObj, "token"));
+			setTokenAndKey();
 		}
+	}
+	
+	private void setTokenAndKey() throws Exception {
+		logger.debug("Getting token");
+		String sig = Convert.toMd5(this.getUserEmail() + this.getApiToken());
+		String url = HTTP_PROTOCOL + "api.toodledo.com/2/account/lookup.php?appid=" + this.APP_ID + ";sig=" + sig + ";email=" + this.getUserEmail() + ";pass=" + this.getUserPass();
+		String response = HttpUtils.httpGet(url).getDetail();
+		logger.debug(response);
+		JSONObject jsonObj = JsonUtils.getJsonObject(response);
+		String userId = JsonUtils.getString(jsonObj, "userid");
+		logger.debug("Getting encoded login for {}/{}", this.getUserEmail(), userId);
+		String encodedLogin = Convert.toMd5(userId + this.getApiToken());
+		url = HTTP_PROTOCOL + "api.toodledo.com/2/account/token.php?userid=" + userId + ";appid=" + this.APP_ID + ";sig=" + encodedLogin;
+		response = HttpUtils.httpGet(url).getDetail();
+		logger.debug(response);
+		jsonObj = JsonUtils.getJsonObject(response);
+		setToken(JsonUtils.getString(jsonObj, "token"));
 		
 		if (this.getToken() == null) {
 			throw new InfrastructureException("Login failed. Token is null.");
@@ -100,6 +105,31 @@ public class CFToodledo
 		}
 
 		setKey(Convert.toMd5(Convert.toMd5(this.getUserPass()) + this.getApiToken() + this.getToken()));
+		
+		initDate = Calendar.getInstance();
+	}
+	
+	/**
+	 * Check the response we got and if it is an error indicating we need to re-login then do that
+	 * and return true to indicate that the operation can be retried. Otherwise, return false
+	 * @param jsonResponse
+	 * @return
+	 */
+	private boolean reinitIfNeeded(String jsonResponse) {
+		boolean ret = false;
+		try {
+			JSONObject jsonObj = JsonUtils.getJsonObject(jsonResponse);
+			String error = JsonUtils.getString(jsonObj, "errorDesc");
+			if (Utils.hasLength(error) && 
+				"key did not validate".equals(error) && 
+				(DateTimeUtils.dateDiff(initDate, Calendar.getInstance(), DateTimeUtils.DATE_PART_HOUR) > 1)) {
+				setTokenAndKey();
+				ret = true;
+			}
+		} catch (Exception e) {
+			logger.error("Error during attempted re-init", e);
+		}
+		return ret;
 	}
 
 	private String getUserEmail() {
@@ -346,8 +376,11 @@ public class CFToodledo
 			}
 		} catch (Exception e) {
 			logger.error("Error getting folders. Response: "+response, e);
+			if (reinitIfNeeded(response)) {
+				getFolders();
+			}
 			if (folders == null) {
-				// We haven't initialized/cached the contexts so let them know
+				// We haven't initialized/cached the folders so let them know
 				throw e;
 			} else {
 				source = "cache";
@@ -427,6 +460,9 @@ public class CFToodledo
 			}
 		} catch (Exception e) {
 			logger.error("Error getting contexts. Response: "+response, e);
+			if (reinitIfNeeded(response)) {
+				getContexts();
+			}
 			if (contexts == null) {
 				// We haven't initialized/cached the contexts so let them know
 				throw e;
