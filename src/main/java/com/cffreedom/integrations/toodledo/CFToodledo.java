@@ -375,9 +375,10 @@ public class CFToodledo
 				}
 			}
 		} catch (Exception e) {
-			logger.error("Error getting folders. Response: "+response, e);
 			if (reinitIfNeeded(response)) {
 				getFolders();
+			} else {
+				logger.error("Error getting folders. Response: "+response, e);
 			}
 			if (folders == null) {
 				// We haven't initialized/cached the folders so let them know
@@ -459,9 +460,10 @@ public class CFToodledo
 				}
 			}
 		} catch (Exception e) {
-			logger.error("Error getting contexts. Response: "+response, e);
 			if (reinitIfNeeded(response)) {
 				getContexts();
+			} else {
+				logger.error("Error getting contexts. Response: "+response, e);
 			}
 			if (contexts == null) {
 				// We haven't initialized/cached the contexts so let them know
