@@ -317,19 +317,19 @@ public class CFToodledo
 		for (Iterator<Task> iter = tasks.listIterator(); iter.hasNext();) {
 			Task task = iter.next();
 			boolean removed = false;
-			if (!removed && (folderName != null) && !task.getFolder().getValue().equals(folder.getValue())) {
+			if (!removed && (folderName != null) && ((task.getFolder() == null) || !task.getFolder().getValue().equals(folder.getValue()))) {
 				iter.remove();
 				removed = true;
 			}
-			if (!removed && (contextName != null) && !task.getContext().getValue().equals(context.getValue())) {
+			if (!removed && (contextName != null) && ((task.getContext() == null) || !task.getContext().getValue().equals(context.getValue()))) {
 				iter.remove();
 				removed = true;
 			}
-			if (!removed && (start != null) && (task.getStartDate().after(start))) {
+			if (!removed && (start != null) && ((task.getStartDate() == null) || task.getStartDate().after(start))) {
 				iter.remove();
 				removed = true;
 			}
-			if (!removed && (due != null) && (task.getDueDate().after(due))) {
+			if (!removed && (due != null) && ((task.getDueDate() == null) || task.getDueDate().after(due))) {
 				iter.remove();
 				removed = true;
 			}			
