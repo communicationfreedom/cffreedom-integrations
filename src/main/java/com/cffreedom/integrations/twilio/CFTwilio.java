@@ -139,12 +139,10 @@ public class CFTwilio
 	 * @return Call SID
 	 * @throws InfrastructureException
 	 */
-	public String makeCall(String systemNumber, String to, String afterConnectedUrl) throws InfrastructureException
-	{
-		logger.debug("{}/{}/{}", systemNumber, to, afterConnectedUrl);
+	public String makeCall(String systemNumber, String to, String afterConnectedUrl) throws InfrastructureException {
+		logger.debug("Making call from {} to {} : {}", systemNumber, to, afterConnectedUrl);
 		
-		try
-		{
+		try {
 			final CallFactory callFactory = this.getAccount().getCallFactory();
 			final Map<String, String> callParams = new HashMap<String, String>();
 			callParams.put("To", to);
@@ -152,27 +150,21 @@ public class CFTwilio
 			callParams.put("Url", afterConnectedUrl);
 			final Call call = callFactory.create(callParams);
 			return call.getSid();
-		}
-		catch (TwilioRestException e)
-		{
+		} catch (TwilioRestException e) {
 			throw new InfrastructureException("Error making call: " + e.getMessage(), e);
 		}
 	}
 	
-	public String twimlRejectCall() throws InfrastructureException
-	{
+	public String twimlRejectCall() throws InfrastructureException {
 		logger.debug("Rejecting call");
 		
-		try
-		{
+		try {
 			TwiMLResponse resp = new TwiMLResponse();
 			Reject reject = new Reject();
 	
 			resp.append(reject);
 			return getFullXmlTwiML(resp.toXML());
-		}
-		catch (TwiMLException e)
-		{
+		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error: " + e.getMessage(), e);
 		}
 	}
@@ -183,18 +175,14 @@ public class CFTwilio
 	 * @return TWIML XML
 	 * @throws InfrastructureException
 	 */
-	public String twimlSayAndHangUp(String msg) throws InfrastructureException
-	{		
-		try
-		{
+	public String twimlSayAndHangUp(String msg) throws InfrastructureException {		
+		try {
 			TwiMLResponse resp = new TwiMLResponse();
 			Say say = new Say(msg);
 			resp.append(say);
 			resp.append(new Hangup());
 			return getFullXmlTwiML(resp.toXML());
-		}
-		catch (TwiMLException e)
-		{
+		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error: " + e.getMessage(), e);
 		}
 	}
@@ -205,17 +193,13 @@ public class CFTwilio
 	 * @return TWIML XML
 	 * @throws InfrastructureException
 	 */
-	public String twimlSms(String msg) throws InfrastructureException
-	{		
-		try
-		{
+	public String twimlSms(String msg) throws InfrastructureException {		
+		try {
 			TwiMLResponse resp = new TwiMLResponse();
 			com.twilio.sdk.verbs.Sms sms = new com.twilio.sdk.verbs.Sms(msg);
 			resp.append(sms);
 			return getFullXmlTwiML(resp.toXML());
-		}
-		catch (TwiMLException e)
-		{
+		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error: " + e.getMessage(), e);
 		}
 	}
@@ -224,8 +208,7 @@ public class CFTwilio
 	 * Return an empty response
 	 * @return TWIML XML
 	 */
-	public String twimlEmptyResponse()
-	{		
+	public String twimlEmptyResponse() {		
 		TwiMLResponse resp = new TwiMLResponse();
 		return getFullXmlTwiML(resp.toXML());
 	}
@@ -239,8 +222,7 @@ public class CFTwilio
 	 * @throws InfrastructureException
 	 */
 	@Deprecated
-	public String sendSms(String systemNumber, String to, String msg) throws InfrastructureException
-	{
+	public String sendSms(String systemNumber, String to, String msg) throws InfrastructureException {
 		String retMsg = "Not sent";
 		to = Format.phoneNumber(Format.PHONE_INT, to);
 		systemNumber = Format.phoneNumber(Format.PHONE_INT, systemNumber);
@@ -275,12 +257,11 @@ public class CFTwilio
 	 * @return MMS SID
 	 * @throws InfrastructureException
 	 */
-	public String sendTextMsg(String systemNumber, String to, String msg, String imageUrl) throws InfrastructureException
-	{
+	public String sendTextMsg(String systemNumber, String to, String msg, String imageUrl) throws InfrastructureException {
 		String retMsg = "Not sent";
 		to = Format.phoneNumber(Format.PHONE_INT, to);
 		systemNumber = Format.phoneNumber(Format.PHONE_INT, systemNumber);
-		if (Utils.hasLength(msg) == false) {
+		if (!Utils.hasLength(msg)) {
 			logger.warn("No text supplied. Not sending anything {}/{}", systemNumber, to);
 			retMsg = "Nothing to send";
 		} else {
@@ -292,7 +273,7 @@ public class CFTwilio
 				msgParams.add(new BasicNameValuePair("To", to)); // Replace with a valid phone number
 				msgParams.add(new BasicNameValuePair("From", systemNumber)); // Replace with a valid phone number in your account
 				msgParams.add(new BasicNameValuePair("Body", msg));
-				if (Utils.hasLength(imageUrl) == true) {
+				if (Utils.hasLength(imageUrl)) {
 					msgParams.add(new BasicNameValuePair("MediaUrl", imageUrl));
 				}
 				final Message message = msgFactory.create(msgParams);
@@ -315,8 +296,7 @@ public class CFTwilio
 	 * @throws InfrastructureException
 	 */
 	@Deprecated
-	public String sendMms(String systemNumber, String to, String msg, String imageUrl) throws InfrastructureException
-	{
+	public String sendMms(String systemNumber, String to, String msg, String imageUrl) throws InfrastructureException {
 		return sendTextMsg(systemNumber, to, msg, imageUrl);
 	}
 
@@ -344,7 +324,7 @@ public class CFTwilio
 			}
 			gather.setMethod("GET");
 			gather.setTimeout(timeout);
-			if (Utils.hasLength(msgMp3Url) == true) {
+			if (Utils.hasLength(msgMp3Url)) {
 				Play play = new Play(msgMp3Url);
 				gather.append(play);
 			} else {
@@ -383,7 +363,7 @@ public class CFTwilio
 		try {
 			TwiMLResponse resp = new TwiMLResponse();
 			
-			if (Utils.hasLength(prompt) == false){
+			if (!Utils.hasLength(prompt)){
 				prompt = "Please make your recording and press any key when finished.";
 			}
 			Say say = new Say(prompt);
@@ -434,16 +414,18 @@ public class CFTwilio
 			
 			TwiMLResponse resp = new TwiMLResponse();
 			
-			if (Utils.hasLength(number) == true) {
+			if (Utils.hasLength(number)) {
 				number = Format.phoneNumber(Format.PHONE_INT, number);
 				logger.debug("Forwarding to: {}", number);
 				Dial dial = new Dial(number);
 				dial.setTimeout(secondsForForwarding);
 				dial.setTimeLimit(secondsToRecord);
 				resp.append(dial);
+			} else {
+				logger.trace("No forwarding number provided");
 			}
 			
-			if (Utils.hasLength(msgMp3Url) == true) {
+			if (Utils.hasLength(msgMp3Url)) {
 				logger.debug("Play MP3 msg: {}", msgMp3Url);
 				Play play = new Play(msgMp3Url);
 				resp.append(play);
@@ -464,6 +446,12 @@ public class CFTwilio
 		} catch (TwiMLException e) {
 			throw new InfrastructureException("Error in twimlForwardWithVoicemail: " + e.getMessage(), e);
 		}
+	}
+	
+	public String twilmForwardOnly(String forwardingNumber, int forwardingSeconds) throws InfrastructureException {
+		if (forwardingSeconds <= 0) { forwardingSeconds = 15; }
+		logger.trace("Forwarding to {} for {} seconds", forwardingNumber, forwardingSeconds);
+		return twiml(null, null, forwardingNumber, forwardingSeconds, null, null, -1, null, false);
 	}
 	
 	/**
@@ -494,10 +482,11 @@ public class CFTwilio
 				Play play = new Play(msgMp3Url);
 				resp.append(play);
 			} else if (Utils.hasLength(msgTTS)) {
+				logger.trace("Msg TTS: {}", msgTTS);
 				Say say = new Say(msgTTS);
 				resp.append(say);
 			} else {
-				logger.debug("No Msg Mp3Url or TTS provided");
+				logger.trace("No Msg Mp3Url or TTS provided");
 			}
 			
 			if (Utils.hasLength(forwardingNumber)) {
@@ -508,6 +497,8 @@ public class CFTwilio
 				dial.setTimeout(forwardingSeconds);
 				dial.setTimeLimit(60*60); // max len of the call
 				resp.append(dial);
+			} else {
+				logger.trace("No forwarding number provided");
 			}
 			
 			if (Utils.hasLength(vmMsgMp3Url)) {
@@ -515,10 +506,11 @@ public class CFTwilio
 				Play play = new Play(vmMsgMp3Url);
 				resp.append(play);
 			} else if (Utils.hasLength(vmMsgTTS)) {
+				logger.trace("VM TTS: {}", vmMsgTTS);
 				Say say = new Say(vmMsgTTS);
 				resp.append(say);
 			} else {
-				logger.debug("No VM Mp3Url or TTS provided.");
+				logger.trace("No VM Mp3Url or TTS provided");
 			}
 			
 			if (vmSecondsToRecord > 0) {
