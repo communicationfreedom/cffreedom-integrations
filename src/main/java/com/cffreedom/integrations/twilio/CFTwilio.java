@@ -473,7 +473,7 @@ public class CFTwilio
 	 * @param forwardingNumber After any immediate message, forward to this phone number if applicable
 	 * @param forwardingSeconds If forwarding, forward for this many seconds
 	 * @param vmMsgMp3Url Play this message to the caller before taking a VM if a value is provided
-	 * @param vmMsgTTS Read this text to the caller if no Mp3 URL is provided, provides a default message of "Please leave a message"
+	 * @param vmMsgTTS Read this text to the caller if no Mp3 URL is provided.
 	 * @param vmSecondsToRecord Record up to this many seconds of voicemail
 	 * @param vmHandlerUrl URL to redirect to for handling of any voicemail message
 	 * @param transcribe true/false for if you want to transcribe
@@ -489,16 +489,18 @@ public class CFTwilio
 			
 			TwiMLResponse resp = new TwiMLResponse();
 			
-			if (Utils.hasLength(msgMp3Url) == true) {
+			if (Utils.hasLength(msgMp3Url)) {
 				logger.trace("Msg MP3: {}", msgMp3Url);
 				Play play = new Play(msgMp3Url);
 				resp.append(play);
-			} else if (Utils.hasLength(msgTTS) == true) {
+			} else if (Utils.hasLength(msgTTS)) {
 				Say say = new Say(msgTTS);
 				resp.append(say);
+			} else {
+				logger.debug("No Msg Mp3Url or TTS provided");
 			}
 			
-			if (Utils.hasLength(forwardingNumber) == true) {
+			if (Utils.hasLength(forwardingNumber)) {
 				if (forwardingSeconds <= 0) { forwardingSeconds = 15; }
 				forwardingNumber = Format.phoneNumber(Format.PHONE_INT, forwardingNumber);
 				logger.trace("Forwarding to: {}", forwardingNumber);
@@ -508,23 +510,28 @@ public class CFTwilio
 				resp.append(dial);
 			}
 			
-			if (Utils.hasLength(vmMsgMp3Url) == true) {
+			if (Utils.hasLength(vmMsgMp3Url)) {
 				logger.trace("VM MP3: {}", vmMsgMp3Url);
 				Play play = new Play(vmMsgMp3Url);
 				resp.append(play);
-			} else {
-				if (Utils.hasLength(vmMsgTTS) == false) { vmMsgTTS = "Please leave a message."; }
+			} else if (Utils.hasLength(vmMsgTTS)) {
 				Say say = new Say(vmMsgTTS);
 				resp.append(say);
+			} else {
+				logger.debug("No VM Mp3Url or TTS provided.");
 			}
 			
-			logger.trace("Adding voicemail recording and handler");
-			Record record = new Record();
-			record.setAction(vmHandlerUrl);
-			record.setMaxLength(vmSecondsToRecord);
-			//record.setPlayBeep(true);  // this is throwing an error for some reason
-			record.setTranscribe(transcribe);
-			resp.append(record);
+			if (vmSecondsToRecord > 0) {
+				logger.trace("Adding voicemail recording and handler");
+				Record record = new Record();
+				record.setAction(vmHandlerUrl);
+				record.setMaxLength(vmSecondsToRecord);
+				//record.setPlayBeep(true);  // this is throwing an error for some reason
+				record.setTranscribe(transcribe);
+				resp.append(record);
+			} else {
+				logger.debug("Voicemail handling ignored");
+			}
 			
 			return getFullXmlTwiML(resp.toXML());
 		} catch (TwiMLException e) {

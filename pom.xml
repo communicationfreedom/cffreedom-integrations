@@ -23,11 +23,19 @@
 			<artifactId>org.json.simple</artifactId>
 			<version>0.3-incubating</version>
 		</dependency>
+		
 		<dependency>
 			<groupId>com.twilio.sdk</groupId>
 			<artifactId>twilio-java-sdk</artifactId>
 			<version>3.4.6</version>
 		</dependency>
+		<!--
+		<dependency>
+			<groupId>com.twilio.sdk</groupId>
+			<artifactId>twilio</artifactId>
+			<version>7.14.2</version>
+		</dependency>
+		-->
 		<dependency>
 			<groupId>axis</groupId>
 			<artifactId>axis</artifactId>
