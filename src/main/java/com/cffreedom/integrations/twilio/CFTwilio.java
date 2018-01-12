@@ -383,20 +383,6 @@ public class CFTwilio
 	}
 	
 	/**
-	 * Play a recording and take voicemail
-	 * @param msgMp3Url
-	 * @param tts If there is no msgMp3Url, this text will be read to the caller prior to them leaving a voicemail
-	 * @param voicemailHandlerUrl
-	 * @param secondsForForwarding
-	 * @param secondsToRecord
-	 * @return
-	 * @throws InfrastructureException
-	 */
-	public String twimlVoicemailOnly(String msgMp3Url, String tts, String voicemailHandlerUrl, int secondsToRecord) throws InfrastructureException {
-		return twimlForwardWithVoicemail(null, msgMp3Url, tts, voicemailHandlerUrl, 0, secondsToRecord);
-	}
-	
-	/**
 	 * 
 	 * @param number Phone number to forward to
 	 * @param msgMp3Url
@@ -448,7 +434,29 @@ public class CFTwilio
 		}
 	}
 	
-	public String twilmForwardOnly(String forwardingNumber, int forwardingSeconds) throws InfrastructureException {
+	/**
+	 * Just take a voicemail
+	 * @param vmMsgMp3Url
+	 * @param vmMsgTTS
+	 * @param vmSecondsToRecord
+	 * @param vmHandlerUrl
+	 * @param transcribe
+	 * @return
+	 * @throws InfrastructureException
+	 */
+	public String twimlVoicemailOnly(String vmMsgMp3Url, String vmMsgTTS, int vmSecondsToRecord, String vmHandlerUrl, boolean transcribe) throws InfrastructureException {
+		logger.trace("Taking voicemail");
+		return twiml(null, null, null, -1, vmMsgMp3Url, vmMsgTTS, vmSecondsToRecord, vmHandlerUrl, transcribe);
+	}
+	
+	/**
+	 * Forward the caller (and that's it). Let the number being forwarded to handle VM or hangup.
+	 * @param forwardingNumber
+	 * @param forwardingSeconds
+	 * @return
+	 * @throws InfrastructureException
+	 */
+	public String twimlForwardOnly(String forwardingNumber, int forwardingSeconds) throws InfrastructureException {
 		if (forwardingSeconds <= 0) { forwardingSeconds = 15; }
 		logger.trace("Forwarding to {} for {} seconds", forwardingNumber, forwardingSeconds);
 		return twiml(null, null, forwardingNumber, forwardingSeconds, null, null, -1, null, false);
